@@ -26,9 +26,6 @@ Part of **[Swiss {ai} Weeks 2026](https://ai-weeks.ch/)** — Switzerland's larg
 | **Where** | Finnova AG Bankware HQ, Lenzburg 🇨🇭 |
 | **Umbrella** | [Swiss {ai} Weeks 2026](https://ai-weeks.ch/) (1 Sep – 4 Oct 2026) |
 | **Tracks** | Banking & Finance challenges · Freestyle / Open Innovation |
-| **Who** | Everyone — students, devs, startups, corporate experts, the AI-curious |
-| **Ethos** | Human-centered, responsible AI |
-| **Sign-up** | [Luma event page](https://luma.com/kd5177ia) |
 
 > ⚠️ Times, room assignments and the final agenda are published on the official pages — always treat those as the source of truth.
 
@@ -52,32 +49,10 @@ AI video generation with avatars and voiceovers — turn a script into a present
 
 ---
 
-## 🗺️ Team Playbook
-
-A rough shape for the 12 hours. Adjust on the day.
-
-| Phase | Focus |
-|---|---|
-| **⏱️ Hour 0–1** | Lock the challenge. Agree on the *one* demo-able outcome. Split roles. |
-| **🔨 Hour 1–8** | Build the thinnest thing that proves the idea. Commit early, commit often. |
-| **🎨 Hour 8–10** | Feature freeze. Polish the demo path. Nothing new gets added. |
-| **🎤 Hour 10–12** | Pitch deck + demo video (Synthesia). Dry-run the pitch twice. |
-
 ### Rules of thumb
 - 🎯 **Demo > architecture.** Judges see the demo, not the repo.
 - ✂️ **Scope down, then scope down again.** 12 hours is less than it sounds.
-- 📹 **Record a backup demo video early.** Live demos fail at exactly the wrong moment.
 - 🤝 **Responsible AI is a judging lens, not a footnote** — be ready to speak to data, bias and human oversight.
-
----
-
-## 📁 Repo Structure
-
-```
-FinnovaHackathon2026/
-├── README.md          ← you are here
-└── (project code lands here on the day)
-```
 
 ---
 
