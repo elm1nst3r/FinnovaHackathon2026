@@ -32,6 +32,14 @@ export type Bubble = {
   deepLink?: string;
 };
 
+/** The last thing Regula said, kept for the menu-bar dropdown after the bubble is gone. */
+export type Note = {
+  key: string;
+  params: Record<string, string>;
+  deepLink?: string;
+  time: string;
+};
+
 export type Model = {
   role: Role;
   connected: boolean;
@@ -42,6 +50,7 @@ export type Model = {
   approverQueue: ApproverRequest[];
   transient: Transient | null;
   bubble: Bubble | null;
+  lastNote: Note | null;
   pausedUntil: number; // epoch ms, 0 = not paused
   lastRuleId: string | null;
   lastEvent: { kind: string; time: string } | null;
@@ -61,6 +70,7 @@ export function initialModel(): Model {
     approverQueue: [],
     transient: null,
     bubble: null,
+    lastNote: null,
     pausedUntil: 0,
     lastRuleId: null,
     lastEvent: null,
@@ -82,6 +92,11 @@ export function derivePose(m: Model, now: number): Pose {
 function bubble(m: Model, key: string, params: Record<string, string>, now: number, deepLink?: string): Bubble | null {
   if (m.pausedUntil > now) return null;
   return { key, params, until: now + TIMEOUTS_MS.bubble, deepLink };
+}
+
+/** Says something: a bubble now (none while paused) and the note the menu-bar dropdown keeps. */
+function say(m: Model, key: string, params: Record<string, string>, time: string, now: number, deepLink?: string): Model {
+  return { ...m, bubble: bubble(m, key, params, now, deepLink), lastNote: { key, params, deepLink, time } };
 }
 
 function applySnapshot(m: Model, s: Snapshot): Model {
@@ -135,7 +150,7 @@ function applyEvent(m: Model, e: FeedEvent, now: number): Model {
     case "protection.fired":
       next.transient = { pose: "protected", until: now + TIMEOUTS_MS.protected, ruleId: e.ruleId, label: e.label };
       next.lastRuleId = e.ruleId;
-      next.bubble = bubble(next, "protected", { rule: e.ruleId, label: e.label }, now, e.deepLink);
+      next = say(next, "protected", { rule: e.ruleId, label: e.label }, e.time, now, e.deepLink);
       break;
     case "request.sent":
       next.pending = [
@@ -151,28 +166,28 @@ function applyEvent(m: Model, e: FeedEvent, now: number): Model {
         },
       ];
       next.lastRuleId = e.ruleId;
-      next.bubble = bubble(next, "pending", { approver: firstName(e.approver), label: e.label }, now, e.deepLink);
+      next = say(next, "pending", { approver: firstName(e.approver), label: e.label }, e.time, now, e.deepLink);
       break;
     case "request.granted":
       next.pending = next.pending.filter((p) => p.requestId !== e.requestId);
       next.transient = { pose: "granted", until: now + TIMEOUTS_MS.granted, label: e.label };
-      next.bubble = bubble(next, "granted", { until: shortDate(e.until), label: e.label }, now, e.deepLink);
+      next = say(next, "granted", { until: shortDate(e.until), label: e.label }, e.time, now, e.deepLink);
       break;
     case "request.declined":
       next.pending = next.pending.filter((p) => p.requestId !== e.requestId);
       next.transient = { pose: "declined", until: now + TIMEOUTS_MS.declined, label: e.label };
-      next.bubble = bubble(next, "declined", { approver: firstName(e.approver), label: e.label }, now, e.deepLink);
+      next = say(next, "declined", { approver: firstName(e.approver), label: e.label }, e.time, now, e.deepLink);
       break;
     case "draft.signoff_needed":
       next.drafts = [
         ...next.drafts.filter((d) => d.draftId !== e.draftId),
         { draftId: e.draftId, label: e.label, deepLink: e.deepLink },
       ];
-      next.bubble = bubble(next, "signoff", { label: e.label }, now, e.deepLink);
+      next = say(next, "signoff", { label: e.label }, e.time, now, e.deepLink);
       break;
     case "draft.signed":
       next.drafts = next.drafts.filter((d) => d.draftId !== e.draftId);
-      next.bubble = bubble(next, "signed", {}, now);
+      next = say(next, "signed", {}, e.time, now);
       break;
     case "counters.changed":
       next.counters = { ...e.counters };
@@ -182,10 +197,11 @@ function applyEvent(m: Model, e: FeedEvent, now: number): Model {
         { requestId: e.requestId, label: e.label, ruleId: e.ruleId, from: e.from, deepLink: e.deepLink },
         ...next.approverQueue.filter((r) => r.requestId !== e.requestId),
       ];
-      next.bubble = bubble(
+      next = say(
         next,
         "approverNew",
         { from: firstName(e.from), label: e.label, count: String(next.approverQueue.length) },
+        e.time,
         now,
         e.deepLink,
       );

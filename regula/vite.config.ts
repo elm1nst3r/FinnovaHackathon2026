@@ -11,5 +11,9 @@ export default defineConfig({
   build: {
     target: "es2022",
     outDir: "dist",
+    // Two pages: the companion (index.html) and the popup under the menu-bar dot.
+    rollupOptions: {
+      input: { main: "index.html", popup: "popup.html" },
+    },
   },
 });

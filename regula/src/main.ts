@@ -1,5 +1,5 @@
 /**
- * Regula boot: one state machine, one feed, three views (rig, bubble, card).
+ * Regula boot: one state machine, one feed, two views (rig, bubble).
  * The state machine is the only thing that talks to the cockpit; the views
  * only render the model and route clicks to deep links.
  */
@@ -7,9 +7,21 @@ import { createRig, DISC_CENTER_Y } from "./rig";
 import { MockFeed, SseFeed, type Feed } from "./feed";
 import { badgeRuleId, derivePose, initialModel, reduce, trayCount, type Model } from "./state";
 import { renderBubble } from "./bubble";
-import { renderCard } from "./card";
-import { setLang } from "./strings";
-import { getConfig, isTauri, onTrayClickThrough, onTrayPause, openLink, setClickThrough, setDesktop, setTrayState, startDragging } from "./tauri";
+import { setLang, t } from "./strings";
+import { traySummary } from "./tray";
+import {
+  getConfig,
+  isTauri,
+  onTrayClickThrough,
+  onTrayPause,
+  openLink,
+  setClickThrough,
+  setDesktop,
+  setTrayInfo,
+  setTrayState,
+  showTrayPopup,
+  startDragging,
+} from "./tauri";
 import type { Input, Pose } from "./types";
 
 const PAUSE_SECONDS = 60 * 60;
@@ -23,15 +35,13 @@ async function boot() {
   const stage = document.getElementById("stage")!;
   const petEl = document.getElementById("pet")!;
   const bubbleEl = document.getElementById("bubble")!;
-  const cardEl = document.getElementById("card")!;
+  const closeEl = document.getElementById("close") as HTMLButtonElement;
 
   const rig = createRig();
   petEl.appendChild(rig.el);
 
   let model: Model = initialModel();
   let pose: Pose = "offline";
-  let cardOpen = false;
-  let cardPinned = false;
   let clickThrough = false;
   let dirty = true;
 
@@ -48,15 +58,17 @@ async function boot() {
   // ---------------------------------------------------------------- render
   const open = (url: string) => void openLink(url);
   const togglePause = () => dispatch({ type: "pause", seconds: model.pausedUntil > Date.now() ? 0 : PAUSE_SECONDS });
-  const hideToTopBar = () => {
-    closeCard(true);
-    void setDesktop(false);
+  // The x on the disc: Regula stays as the dot in the menu bar, where "Desktop companion"
+  // brings it back. The browser preview has no menu bar, so there it just hides the pet.
+  const close = () => {
+    dispatch({ type: "dismiss-bubble" });
+    if (isTauri) void setDesktop(false);
+    else petEl.hidden = true;
   };
   const toggleClickThrough = () => {
     clickThrough = !clickThrough;
     stage.classList.toggle("click-through", clickThrough);
     void setClickThrough(clickThrough);
-    if (clickThrough) closeCard(true);
     dirty = true;
   };
 
@@ -72,6 +84,28 @@ async function boot() {
     void setTrayState(trayPose, count, phase);
   };
 
+  // The dropdown behind the dot: status, counters, last note, items waiting, details link.
+  let trayInfoKey = "";
+  const syncTrayInfo = () => {
+    const info = traySummary(model, pose, config.cockpit_url, config.mock);
+    const key = JSON.stringify(info);
+    if (key === trayInfoKey) return;
+    trayInfoKey = key;
+    void setTrayInfo(info);
+  };
+
+  // Every new bubble (except the quiet "thinking" one) is also offered to the shell
+  // as a popup under the dot; the shell only shows it while the companion is hidden.
+  let popupKey = "";
+  const syncPopup = () => {
+    const b = model.bubble;
+    if (!b || b.key === "working") return;
+    const key = b.key + b.until;
+    if (key === popupKey) return;
+    popupKey = key;
+    void showTrayPopup(t(b.key, b.params), b.deepLink ?? null);
+  };
+
   const render = () => {
     const now = Date.now();
     const nextPose = derivePose(model, now);
@@ -80,18 +114,10 @@ async function boot() {
       rig.setPose(pose);
     }
     syncTray(now);
+    syncTrayInfo();
+    syncPopup();
     rig.setRuleId(badgeRuleId(model, pose));
     renderBubble(bubbleEl, model.bubble, { dismiss: () => dispatch({ type: "dismiss-bubble" }), open });
-    if (cardOpen) {
-      renderCard(
-        cardEl,
-        model,
-        pose,
-        { cockpit: config.cockpit_url, mock: config.mock, hint: feed.upcoming?.() ?? null, clickThrough, canHide: isTauri },
-        { open, togglePause, toggleClickThrough, hideToTopBar },
-      );
-    }
-    cardEl.hidden = !cardOpen;
     if (model.disabled) {
       feed.stop();
       petEl.style.opacity = "0.3";
@@ -107,44 +133,15 @@ async function boot() {
     else syncTray(now);
   }, 250);
 
-  // ---------------------------------------------------------------- card open / close
-  let hoverTimer: ReturnType<typeof setTimeout> | null = null;
-  const openCard = () => {
-    if (clickThrough) return;
-    if (hoverTimer) clearTimeout(hoverTimer);
-    hoverTimer = null;
-    if (!cardOpen) {
-      cardOpen = true;
-      dirty = true;
-    }
-  };
-  const closeCard = (force = false) => {
-    if (cardPinned && !force) return;
-    if (hoverTimer) clearTimeout(hoverTimer);
-    hoverTimer = null;
-    cardPinned = false;
-    if (cardOpen) {
-      cardOpen = false;
-      dirty = true;
-    }
-  };
-  const scheduleClose = () => {
-    if (hoverTimer) clearTimeout(hoverTimer);
-    hoverTimer = setTimeout(() => closeCard(), 700);
-  };
-  petEl.addEventListener("mouseenter", () => {
-    if (hoverTimer) clearTimeout(hoverTimer);
-    hoverTimer = setTimeout(openCard, 250);
-  });
-  petEl.addEventListener("mouseleave", scheduleClose);
-  cardEl.addEventListener("mouseenter", () => {
-    if (hoverTimer) clearTimeout(hoverTimer);
-  });
-  cardEl.addEventListener("mouseleave", scheduleClose);
+  // ---------------------------------------------------------------- close button
+  closeEl.hidden = false;
+  closeEl.title = t("close");
+  closeEl.setAttribute("aria-label", t("close"));
+  closeEl.addEventListener("mousedown", (e) => e.stopPropagation()); // not a drag start
+  closeEl.addEventListener("click", close);
 
   // ---------------------------------------------------------------- drag vs click
-  // Mouse down on Regula: a few px of movement starts a native window drag;
-  // a release without movement is a click, which pins / unpins the card.
+  // Mouse down on Regula: a few px of movement starts a native window drag.
   let down: { x: number; y: number } | null = null;
   let dragging = false;
   petEl.addEventListener("mousedown", (e) => {
@@ -160,13 +157,6 @@ async function boot() {
     }
   });
   window.addEventListener("mouseup", () => {
-    if (down && !dragging) {
-      if (cardOpen && cardPinned) closeCard(true);
-      else {
-        openCard();
-        cardPinned = true;
-      }
-    }
     down = null;
     dragging = false;
   });
@@ -191,7 +181,6 @@ async function boot() {
   // ---------------------------------------------------------------- keyboard
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      closeCard(true);
       dispatch({ type: "dismiss-bubble" });
       return;
     }

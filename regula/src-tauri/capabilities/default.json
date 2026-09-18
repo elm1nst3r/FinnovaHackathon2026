@@ -1,8 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Regula pet window: drag, show/hide, click-through, open cockpit links, remember position.",
-  "windows": ["main"],
+  "description": "Regula windows: drag, show/hide, click-through, open cockpit links, remember position; the popup under the menu-bar dot shows and hides itself.",
+  "windows": [
+    "main",
+    "popup"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",

@@ -5,10 +5,12 @@
 //!
 //! By default Regula is only a pink dot in the menu bar / tray, the full stop
 //! from the finnova logo, recoloured per cockpit state. The Rust side owns that
-//! dot, the tray menu and the transparent companion window, which stays hidden
-//! until the user opts in ("Show Regula on the desktop"). Everything Regula
-//! knows (state machine, feed client, card, bubbles) lives in the web view, so
-//! this file stays deliberately small.
+//! dot, its dropdown (a short summary the web view reports, plus the actions),
+//! the popup that appears under the dot when something happens while the
+//! companion is hidden, and the transparent companion window itself, which
+//! stays hidden until the user opts in ("Show Regula on the desktop").
+//! Everything Regula knows (state machine, feed client, card, bubbles) lives in
+//! the web view, so this file stays deliberately small.
 
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
@@ -16,7 +18,7 @@ use tauri::{
     image::Image,
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager, Emitter,
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewWindow,
 };
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_window_state::StateFlags;
@@ -103,11 +105,40 @@ fn save_settings(app: &AppHandle, settings: &Settings) {
     }
 }
 
-/// Shared handles the commands need: the "show on desktop" check item.
-struct Shell {
-    desktop_item: CheckMenuItem<tauri::Wry>,
-    settings: Mutex<Settings>,
+// ---------------------------------------------------------------- dropdown
+/// One line of the dropdown; with a url it opens that cockpit page on click.
+#[derive(Clone, Default, Serialize, Deserialize)]
+struct TrayLink {
+    text: String,
+    url: Option<String>,
 }
+
+/// The short summary the web view derives from its model (see `src/tray.ts`).
+/// The shell turns it into native menu items above the actions.
+#[derive(Clone, Default, Serialize, Deserialize)]
+struct TrayInfo {
+    status: String,
+    counters: String,
+    note: Option<TrayLink>,
+    items: Vec<TrayLink>,
+    details: Option<TrayLink>,
+}
+
+/// Shared state the commands and menu events need. The menu is rebuilt from
+/// `info` whenever the web view reports a change, so the check item and the
+/// link table are replaced along with it.
+struct Shell {
+    desktop_item: Mutex<CheckMenuItem<tauri::Wry>>,
+    settings: Mutex<Settings>,
+    info: Mutex<TrayInfo>,
+    /// Deep links behind the `link:<n>` menu ids, in menu order.
+    links: Mutex<Vec<String>>,
+}
+
+/// Logical width of the popup window, one to one with `tauri.conf.json`.
+const POPUP_WIDTH: f64 = 340.0;
+/// Gap between the menu bar and the popup's caret.
+const POPUP_GAP: f64 = 4.0;
 
 // ---------------------------------------------------------------- tray dot
 // Brand colours, one to one with src/tokens.css.
@@ -264,12 +295,78 @@ fn set_desktop(app: AppHandle, enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// The web view reports what the dropdown should say; the shell rebuilds the
+/// native menu so the summary sits above the actions.
+#[tauri::command]
+fn set_tray_info(app: AppHandle, info: TrayInfo) -> Result<(), String> {
+    let shell = app.try_state::<Shell>().ok_or("no shell")?;
+    *shell.info.lock().unwrap() = info;
+    refresh_menu(&app).map_err(|e| e.to_string())
+}
+
+/// Something happened. If the companion is visible its bubble already says it
+/// and nothing else is needed; if it is hidden, the popup under the menu-bar
+/// dot shows the same wording. The popup window renders, shows and hides itself.
+#[tauri::command]
+fn show_popup(app: AppHandle, text: String, deep_link: Option<String>, open_label: String) -> Result<(), String> {
+    let companion_visible = app
+        .get_webview_window("main")
+        .and_then(|w| w.is_visible().ok())
+        .unwrap_or(false);
+    if companion_visible {
+        return Ok(());
+    }
+    let popup = app.get_webview_window("popup").ok_or("no popup window")?;
+    place_under_tray(&app, &popup);
+    #[derive(Clone, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Payload {
+        text: String,
+        deep_link: Option<String>,
+        open_label: String,
+    }
+    app.emit_to("popup", "regula:popup", Payload { text, deep_link, open_label })
+        .map_err(|e| e.to_string())
+}
+
+/// Centre the popup under the menu-bar dot, kept inside the screen it is on.
+fn place_under_tray(app: &AppHandle, popup: &WebviewWindow) {
+    let Some(rect) = app.tray_by_id(TRAY_ID).and_then(|t| t.rect().ok().flatten()) else {
+        return;
+    };
+    let scale = popup.scale_factor().unwrap_or(1.0);
+    let pos: LogicalPosition<f64> = rect.position.to_logical(scale);
+    let size: LogicalSize<f64> = rect.size.to_logical(scale);
+    let width = popup
+        .outer_size()
+        .map(|s| s.to_logical::<f64>(scale).width)
+        .unwrap_or(POPUP_WIDTH);
+    let mut x = pos.x + size.width / 2.0 - width / 2.0;
+    let y = pos.y + size.height + POPUP_GAP;
+
+    let centre = rect.position.to_physical::<f64>(scale);
+    if let Ok(Some(monitor)) = app.monitor_from_point(centre.x + 1.0, centre.y + 1.0) {
+        let ms = monitor.scale_factor();
+        let area = monitor.work_area();
+        let left = area.position.to_logical::<f64>(ms).x + 8.0;
+        let right = left + area.size.to_logical::<f64>(ms).width - width - 16.0;
+        x = x.clamp(left, right.max(left));
+    }
+    let _ = popup.set_position(LogicalPosition::new(x, y));
+}
+
 fn apply_desktop(app: &AppHandle, enabled: bool) {
     if let Some(win) = app.get_webview_window("main") {
         let _ = if enabled { win.show() } else { win.hide() };
     }
+    if enabled {
+        // The companion takes over; whatever the popup was saying is now a bubble.
+        if let Some(popup) = app.get_webview_window("popup") {
+            let _ = popup.hide();
+        }
+    }
     if let Some(shell) = app.try_state::<Shell>() {
-        let _ = shell.desktop_item.set_checked(enabled);
+        let _ = shell.desktop_item.lock().unwrap().set_checked(enabled);
         let mut s = shell.settings.lock().unwrap();
         s.desktop = enabled;
         save_settings(app, &s);
@@ -277,30 +374,96 @@ fn apply_desktop(app: &AppHandle, enabled: bool) {
     let _ = app.emit("regula:desktop", enabled);
 }
 
-fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
-    let desktop = CheckMenuItem::with_id(
+/// The dropdown: the summary from the web view on top (status and counters as
+/// plain lines, then the last note, the items waiting and the details link as
+/// clickable entries), a separator, then the actions.
+fn build_menu(
+    app: &AppHandle,
+    info: &TrayInfo,
+    desktop: bool,
+) -> tauri::Result<(Menu<tauri::Wry>, CheckMenuItem<tauri::Wry>, Vec<String>)> {
+    let menu = Menu::new(app)?;
+    let mut links: Vec<String> = Vec::new();
+    let mut link_item = |text: &str, url: &Option<String>| -> tauri::Result<MenuItem<tauri::Wry>> {
+        let item = match url {
+            Some(u) => {
+                links.push(u.clone());
+                MenuItem::with_id(app, format!("link:{}", links.len() - 1), text, true, None::<&str>)?
+            }
+            None => MenuItem::new(app, text, false, None::<&str>)?,
+        };
+        Ok(item)
+    };
+
+    if !info.status.is_empty() {
+        menu.append(&MenuItem::new(app, &info.status, false, None::<&str>)?)?;
+    }
+    if !info.counters.is_empty() {
+        menu.append(&MenuItem::new(app, &info.counters, false, None::<&str>)?)?;
+    }
+    if let Some(note) = &info.note {
+        menu.append(&link_item(&note.text, &note.url)?)?;
+    }
+    if !info.items.is_empty() {
+        menu.append(&PredefinedMenuItem::separator(app)?)?;
+        for item in &info.items {
+            menu.append(&link_item(&item.text, &item.url)?)?;
+        }
+    }
+    if let Some(details) = &info.details {
+        menu.append(&PredefinedMenuItem::separator(app)?)?;
+        menu.append(&link_item(&details.text, &details.url)?)?;
+    }
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    let desktop_item = CheckMenuItem::with_id(
         app,
         "desktop",
         "Show Regula on the desktop",
         true,
-        settings.desktop,
+        desktop,
         None::<&str>,
     )?;
-    let open = MenuItem::with_id(app, "open", "Open cockpit", true, None::<&str>)?;
-    let pause = MenuItem::with_id(app, "pause", "Pause reactions for 1 h", true, None::<&str>)?;
-    let resume = MenuItem::with_id(app, "resume", "Resume reactions", true, None::<&str>)?;
-    let click_through = MenuItem::with_id(app, "clickthrough", "Toggle click-through", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit Regula", true, None::<&str>)?;
-    let sep = PredefinedMenuItem::separator(app)?;
-    let sep2 = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(
-        app,
-        &[&desktop, &open, &sep, &pause, &resume, &click_through, &sep2, &quit],
-    )?;
+    menu.append(&desktop_item)?;
+    menu.append(&MenuItem::with_id(app, "open", "Open cockpit", true, None::<&str>)?)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(app, "pause", "Pause reactions for 1 h", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "resume", "Resume reactions", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "clickthrough", "Toggle click-through", true, None::<&str>)?)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(app, "quit", "Quit Regula", true, None::<&str>)?)?;
+
+    Ok((menu, desktop_item, links))
+}
+
+/// Rebuild the dropdown from the current summary and settings and hand it to the tray.
+fn refresh_menu(app: &AppHandle) -> tauri::Result<()> {
+    let shell = app.state::<Shell>();
+    let (menu, desktop_item, links) = {
+        let info = shell.info.lock().unwrap();
+        let desktop = shell.settings.lock().unwrap().desktop;
+        build_menu(app, &info, desktop)?
+    };
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        tray.set_menu(Some(menu))?;
+    }
+    *shell.desktop_item.lock().unwrap() = desktop_item;
+    *shell.links.lock().unwrap() = links;
+    Ok(())
+}
+
+fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
+    let info = TrayInfo {
+        status: "Regula · starting".to_string(),
+        ..TrayInfo::default()
+    };
+    let (menu, desktop_item, links) = build_menu(app, &info, settings.desktop)?;
 
     app.manage(Shell {
-        desktop_item: desktop,
+        desktop_item: Mutex::new(desktop_item),
         settings: Mutex::new(settings),
+        info: Mutex::new(info),
+        links: Mutex::new(links),
     });
 
     TrayIconBuilder::with_id(TRAY_ID)
@@ -309,29 +472,42 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
         .tooltip("Regula")
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "desktop" => {
-                let enabled = app
-                    .try_state::<Shell>()
-                    .and_then(|s| s.desktop_item.is_checked().ok())
-                    .unwrap_or(false);
-                apply_desktop(app, enabled);
+        .on_menu_event(|app, event| {
+            let id = event.id.as_ref();
+            if let Some(index) = id.strip_prefix("link:") {
+                let url = index
+                    .parse::<usize>()
+                    .ok()
+                    .and_then(|i| app.state::<Shell>().links.lock().unwrap().get(i).cloned());
+                if let Some(url) = url {
+                    let _ = app.opener().open_url(url, None::<&str>);
+                }
+                return;
             }
-            "open" => {
-                let url = app.state::<Config>().cockpit_url.clone();
-                let _ = app.opener().open_url(url, None::<&str>);
+            match id {
+                "desktop" => {
+                    let enabled = app
+                        .try_state::<Shell>()
+                        .and_then(|s| s.desktop_item.lock().unwrap().is_checked().ok())
+                        .unwrap_or(false);
+                    apply_desktop(app, enabled);
+                }
+                "open" => {
+                    let url = app.state::<Config>().cockpit_url.clone();
+                    let _ = app.opener().open_url(url, None::<&str>);
+                }
+                "pause" => {
+                    let _ = app.emit("regula:pause", 60 * 60);
+                }
+                "resume" => {
+                    let _ = app.emit("regula:pause", 0);
+                }
+                "clickthrough" => {
+                    let _ = app.emit("regula:toggle-click-through", ());
+                }
+                "quit" => app.exit(0),
+                _ => {}
             }
-            "pause" => {
-                let _ = app.emit("regula:pause", 60 * 60);
-            }
-            "resume" => {
-                let _ = app.emit("regula:pause", 0);
-            }
-            "clickthrough" => {
-                let _ = app.emit("regula:toggle-click-through", ());
-            }
-            "quit" => app.exit(0),
-            _ => {}
         })
         .build(app)?;
     Ok(())
@@ -345,6 +521,7 @@ fn main() {
             // that follows the "show on the desktop" setting instead.
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::POSITION | StateFlags::SIZE)
+                .skip_initial_state("popup")
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
@@ -352,7 +529,9 @@ fn main() {
             open_cockpit,
             set_click_through,
             set_tray_state,
-            set_desktop
+            set_desktop,
+            set_tray_info,
+            show_popup
         ])
         .setup(|app| {
             let settings = load_settings(app.handle());

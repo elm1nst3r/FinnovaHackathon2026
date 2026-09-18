@@ -30,6 +30,23 @@
         "acceptFirstMouse": true,
         "visibleOnAllWorkspaces": true,
         "visible": false
+      },
+      {
+        "label": "popup",
+        "url": "popup.html",
+        "title": "Regula",
+        "width": 340,
+        "height": 84,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "acceptFirstMouse": true,
+        "visibleOnAllWorkspaces": true,
+        "visible": false
       }
     ],
     "security": {

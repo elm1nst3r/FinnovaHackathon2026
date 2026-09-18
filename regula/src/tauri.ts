@@ -3,6 +3,9 @@
  * in a plain browser still shows Regula (drag, tray and click-through are no-ops).
  */
 
+import type { TrayInfo } from "./tray";
+import { t } from "./strings";
+
 export type AppConfig = { mock: boolean; cockpit_url: string; lang: string; desktop: boolean };
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -67,4 +70,22 @@ export async function setDesktop(enabled: boolean): Promise<void> {
   if (!isTauri) return;
   const { invoke } = await import("@tauri-apps/api/core");
   await invoke("set_desktop", { enabled });
+}
+
+/** What the menu-bar dropdown shows; the shell rebuilds its native menu from this. */
+export async function setTrayInfo(info: TrayInfo): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("set_tray_info", { info });
+}
+
+/**
+ * Something happened while the companion is hidden: the shell shows a small
+ * popup under the menu-bar dot with the same wording as the bubble. When the
+ * companion is visible the bubble already says it and the shell does nothing.
+ */
+export async function showTrayPopup(text: string, deepLink: string | null): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("show_popup", { text, deepLink, openLabel: t("openBtn") });
 }

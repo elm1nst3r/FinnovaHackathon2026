@@ -24,11 +24,15 @@ Rust: `src-tauri/rust-toolchain.toml` pins a current stable toolchain (Tauri 2.1
 | R | restart the story |
 | O | toggle offline |
 | P | pause / resume reactions |
-| Esc | close card, dismiss bubble |
+| Esc | dismiss bubble |
 
-The menu-bar dot changes with the state (solid pink idle, breathing while working, hollow while pending, badges for protected / granted / declined / sign-off, muted pink offline or paused) and shows a count of items waiting on you. Its menu offers the desktop companion (off by default, remembered), open cockpit, pause for 1 h, click-through and quit.
+The menu-bar dot changes with the state (solid pink idle, breathing while working, hollow while pending, badges for protected / granted / declined / sign-off, muted pink offline or paused) and shows a count of items waiting on you.
 
-On the desktop: hover Regula for the card, click to pin it, drag to move it. "Top bar only" in the card hides it again.
+Click the dot for the dropdown. On top: the connection status and how many items wait on you, the four access counters, the last thing Regula said (click it to open the page it points to), one entry per pending request or draft (each opens its cockpit deep link), and "Open details in the cockpit". Below that are the actions: the desktop companion (off by default, remembered), open cockpit, pause for 1 h, click-through and quit.
+
+When the companion is hidden and something happens (a rule fired, a request was sent, granted or declined, a draft needs sign-off), a small popup appears under the dot with the same wording as the bubble and an Open button; it goes away after 6 s or on click. When the companion is visible the bubble says it instead, so nothing shows twice.
+
+On the desktop: drag Regula to move it. Hover it for a small x that hides it again; the dot and its dropdown keep everything reachable, and "Desktop companion" there brings it back.
 
 ## Layout
 
@@ -37,17 +41,18 @@ src/state.ts        state machine: model, reducer, pose derivation, timers
 src/feed.ts         MockFeed (scripted) and SseFeed (GET /api/pet/state + /api/pet/events)
 src/mock-script.ts  Mira's story: working → CH-ID-01 → IBAN request → granted → sign-off → declined set
 src/rig.ts          the SVG rig (pink disc with a navy face); poses switched via data-state
-src/styles.css      pose animations, card, bubble
+src/styles.css      pose animations, bubble, close button
 src/tokens.css      cockpit design tokens (re-skin here)
 src/strings.ts      every word Regula says, EN and DE
-src/card.ts         counters, pending list, deep-link buttons
 src/bubble.ts       speech bubble
+src/tray.ts         the dropdown summary derived from the model (status, counters, last note, items, details link)
 src/tauri.ts        bridge to the Rust shell with a browser fallback
-src-tauri/          Tauri 2 shell: menu-bar dot drawn per state, tray menu, hidden-by-default companion window, settings.json
+src/popup.ts        the popup window under the menu-bar dot (popup.html; preview at /popup.html)
+src-tauri/          Tauri 2 shell: menu-bar dot drawn per state, dropdown rebuilt from the summary, popup placement, hidden-by-default companion window, settings.json
 ```
 
 ## What the POC covers
 
-P0 from the PRD: F1 (menu-bar dot first; the companion window is transparent, frameless, always on top, draggable, position remembered, click-through via tray, opt-in), F2 for the mock feed plus an SSE client with back-off for the real one, F3 all nine poses, F4 the card, F5 the tray, F6 bubbles. From P1: German strings and the approver queue in the model and card.
+P0 from the PRD: F1 (menu-bar dot first; the companion window is transparent, frameless, always on top, draggable, position remembered, click-through via tray, opt-in), F2 for the mock feed plus an SSE client with back-off for the real one, F3 all nine poses, F5 the tray with its summary dropdown, F6 bubbles. From P1: German strings, the approver queue in the model and tray dropdown, and F8 as an in-app popup under the dot instead of a native OS notification.
 
-Not in the POC: device-token auth and keychain, native OS notifications, nudges, settings, signed installers, sound.
+Not in the POC: device-token auth and keychain, native OS notifications (the popup stands in), nudges, settings, signed installers, sound.

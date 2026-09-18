@@ -22,7 +22,7 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --transition: 300ms;
 
-  /* card / bubble surfaces follow the OS theme; Regula itself does not change */
+  /* bubble / popup surfaces follow the OS theme; Regula itself does not change */
   --surface: var(--paper);
   --surface-text: var(--ink);
   --surface-muted: var(--muted);
