@@ -1,8 +1,7 @@
 /**
  * What the menu-bar dropdown shows: a status line, the cockpit totals, the
  * last thing Regula said (with its time), the items waiting in two groups
- * ("Needs you", "With the approver"), the link to the details in the cockpit,
- * and the labels of the fixed actions below (so every word, including the
+ * ("Needs you", "With the approver"), and the labels of the fixed actions below (so every word, including the
  * settings, is localised here). Pure: model in, strings out. The Rust shell
  * renders it as native menu items and opens the links; nothing here navigates.
  */
@@ -18,7 +17,6 @@ export type TrayGroup = { title: string; items: TrayLink[] };
 export type TrayActions = {
   openCockpit: string;
   pause: string;
-  pauseTomorrow: string;
   resume: string;
   /** Check item: the desktop companion on or off (the dot stays in the menu bar). */
   desktop: string;
@@ -40,8 +38,7 @@ export type TrayInfo = {
   note: TrayLink | null;
   /** Items waiting, grouped; each opens its cockpit deep link. */
   groups: TrayGroup[];
-  details: TrayLink;
-  /** True while reactions are paused; the shell shows Resume instead of the Pause entries. */
+  /** True while reactions are paused; the shell shows Resume instead of Pause. */
   paused: boolean;
   actions: TrayActions;
 };
@@ -125,12 +122,10 @@ export function traySummary(m: Model, pose: Pose, cockpit: string, mock: boolean
     counters,
     note,
     groups,
-    details: { text: t("trayDetails"), url: `${cockpit}/access#requests` },
     paused: pose === "paused",
     actions: {
       openCockpit: t("trayOpenCockpit"),
       pause: t("trayPause"),
-      pauseTomorrow: t("trayPauseTomorrow"),
       resume: t("trayResume"),
       desktop: t("trayDesktop"),
       clickThrough: t("trayClickThrough"),

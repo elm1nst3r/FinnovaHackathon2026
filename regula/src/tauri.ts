@@ -49,8 +49,8 @@ export async function setClickThrough(enabled: boolean): Promise<void> {
   await invoke("set_click_through", { enabled });
 }
 
-/** The dropdown's pause entries: "1h", "tomorrow" or "resume"; the web view turns them into seconds. */
-export type PauseChoice = "1h" | "tomorrow" | "resume";
+/** The dropdown's pause entry: "1h" or "resume"; the web view turns them into seconds. */
+export type PauseChoice = "1h" | "resume";
 
 export async function onTrayPause(cb: (choice: PauseChoice) => void): Promise<void> {
   if (!isTauri) return;

@@ -11,7 +11,7 @@
 //! managed online in the cockpit, the dropdown only links there),
 //! the popup that appears under the dot when something happens while the
 //! companion is hidden, and the transparent companion window itself, which
-//! stays hidden until the user opts in ("Show regula.dot on the desktop").
+//! stays hidden until the user opts in ("Show on desktop").
 //! Everything Regula knows (state machine, feed client, card, bubbles) lives in
 //! the web view, so this file stays deliberately small.
 
@@ -143,8 +143,6 @@ struct TrayLink {
 struct TrayActions {
     open_cockpit: String,
     pause: String,
-    #[serde(default)]
-    pause_tomorrow: String,
     resume: String,
     desktop: String,
     click_through: String,
@@ -160,14 +158,13 @@ impl Default for TrayActions {
     fn default() -> Self {
         TrayActions {
             open_cockpit: "Open cockpit".into(),
-            pause: "Pause reactions for 1 h".into(),
-            pause_tomorrow: "Pause reactions until tomorrow".into(),
+            pause: "Pause reactions".into(),
             resume: "Resume reactions".into(),
-            desktop: "Show regula.dot on the desktop".into(),
-            click_through: "Let clicks pass through regula.dot".into(),
-            popups: "Show notes under the dot while regula.dot is hidden".into(),
-            settings: TrayLink { text: "Manage settings in the cockpit…".into(), url: None },
-            help: TrayLink { text: "What is regula.dot?".into(), url: None },
+            desktop: "Show on desktop".into(),
+            click_through: "Let clicks pass through".into(),
+            popups: "Show notes while hidden".into(),
+            settings: TrayLink { text: "Settings…".into(), url: None },
+            help: TrayLink { text: "About regula.dot".into(), url: None },
             quit: "Quit regula.dot".into(),
         }
     }
@@ -190,7 +187,6 @@ struct TrayInfo {
     note: Option<TrayLink>,
     #[serde(default)]
     groups: Vec<TrayGroup>,
-    details: Option<TrayLink>,
     #[serde(default)]
     paused: bool,
     #[serde(default)]
@@ -525,7 +521,7 @@ struct BuiltMenu {
 
 /// The dropdown, top to bottom: the summary from the web view (status and
 /// counters as plain lines, the last note, the items waiting under their group
-/// headers), the cockpit links, the pause entries (or one Resume), the
+/// headers), the cockpit link, Pause (or Resume), the
 /// settings (the desktop check item, the click-through check item, the link to
 /// the rest in the cockpit, and what regula.dot is), quit.
 fn build_menu(app: &AppHandle, info: &TrayInfo, settings: &Settings, click_through: bool) -> tauri::Result<BuiltMenu> {
@@ -568,19 +564,13 @@ fn build_menu(app: &AppHandle, info: &TrayInfo, settings: &Settings, click_throu
     // Cockpit
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     menu.append(&MenuItem::with_id(app, "open", &a.open_cockpit, true, None::<&str>)?)?;
-    if let Some(details) = &info.details {
-        menu.append(&link_item(&details.text, &details.url)?)?;
-    }
 
-    // Reactions: while paused only Resume; otherwise the two pause lengths.
+    // Reactions: Resume while paused, otherwise Pause (one hour).
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     if info.paused {
         menu.append(&MenuItem::with_id(app, "resume", &a.resume, true, None::<&str>)?)?;
     } else {
         menu.append(&MenuItem::with_id(app, "pause", &a.pause, true, None::<&str>)?)?;
-        if !a.pause_tomorrow.is_empty() {
-            menu.append(&MenuItem::with_id(app, "pause-tomorrow", &a.pause_tomorrow, true, None::<&str>)?)?;
-        }
     }
 
     // Settings kept locally: the desktop companion, click-through, the popup under the dot.
@@ -675,9 +665,6 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
                 }
                 "pause" => {
                     let _ = app.emit("regula:pause", "1h");
-                }
-                "pause-tomorrow" => {
-                    let _ = app.emit("regula:pause", "tomorrow");
                 }
                 "resume" => {
                     let _ = app.emit("regula:pause", "resume");

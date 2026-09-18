@@ -63,10 +63,9 @@ assert.equal(pose(), "pending", "Pending persists as long as the cockpit says so
   assert.deepEqual(tray.groups, [
     { title: "With the approver", items: [{ text: "Account number (IBAN) · with Jonas Frei · 1 min", url: `${cockpit}/access?item=iban` }] },
   ]);
-  assert.equal(tray.details.url, `${cockpit}/access#requests`);
   assert.equal(tray.paused, false);
-  assert.equal(tray.actions.desktop, "Show regula.dot on the desktop");
-  assert.equal(tray.actions.popups, "Show notes under the dot while regula.dot is hidden");
+  assert.equal(tray.actions.desktop, "Show on desktop");
+  assert.equal(tray.actions.popups, "Show notes while hidden");
   assert.equal(tray.actions.settings.url, `${cockpit}/settings#regula-dot`);
   assert.equal(tray.actions.help.url, `${cockpit}/help#regula-dot`);
   assert.equal(traySummary(m, pose(), cockpit, false, { now, clickThrough: true }).status, "Connected · 1 item waiting · Clicks pass through");
@@ -139,7 +138,7 @@ assert.equal(m, before, "event older than 24 h ignored");
 // Every string stays under 12 words and never carries an emoji.
 for (const lang of ["en", "de"] as const) {
   setLang(lang);
-  for (const key of ["working", "protected", "pending", "granted", "declined", "signoff", "signed", "offline", "approverNew", "openFailed", "welcome", "trayNothing", "trayOne", "trayMany", "trayCounters", "trayDetails", "trayPauseTomorrow", "trayHelp"]) {
+  for (const key of ["working", "protected", "pending", "granted", "declined", "signoff", "signed", "offline", "approverNew", "openFailed", "welcome", "trayNothing", "trayOne", "trayMany", "trayCounters", "trayOpenCockpit", "trayPause", "trayResume", "trayDesktop", "trayClickThrough", "trayPopups", "traySettings", "trayHelp", "trayQuit"]) {
     const s = t(key, { rule: "CH-ACC-01", label: "Account number (IBAN)", approver: "Jonas", until: "30 Sep", from: "Mira", count: "1", n: "2", open: "1", protected: "2", waiting: "1", granted: "1" });
     assert.ok(s.split(/\s+/).length <= 12, `${lang}.${key} too long: ${s}`);
     assert.ok(!/\p{Extended_Pictographic}/u.test(s), `${lang}.${key} has an emoji`);

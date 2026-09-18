@@ -28,23 +28,14 @@ import {
 import type { Input, Pose } from "./types";
 
 const PAUSE_SECONDS = 60 * 60;
-/** "Until tomorrow" means the next morning at this hour, local time. */
-const TOMORROW_HOUR = 8;
 const LOOK_RADIUS_PX = 200;
 const LOOK_MAX_PX = 1.8;
 /** While the cursor rests on the bubble it stays at least this much longer. */
 const BUBBLE_HOLD_MS = 1_500;
 const WELCOMED_KEY = "regula.welcomed";
 
-function secondsUntilTomorrow(now: Date): number {
-  const next = new Date(now);
-  next.setDate(next.getDate() + 1);
-  next.setHours(TOMORROW_HOUR, 0, 0, 0);
-  return Math.max(60, Math.round((next.getTime() - now.getTime()) / 1000));
-}
-
 function pauseSeconds(choice: PauseChoice): number {
-  return choice === "resume" ? 0 : choice === "tomorrow" ? secondsUntilTomorrow(new Date()) : PAUSE_SECONDS;
+  return choice === "resume" ? 0 : PAUSE_SECONDS;
 }
 
 async function boot() {
@@ -87,8 +78,8 @@ async function boot() {
     );
   };
   const togglePause = () => dispatch({ type: "pause", seconds: model.pausedUntil > Date.now() ? 0 : PAUSE_SECONDS });
-  // The x on the disc: Regula stays as the dot in the menu bar, where "Show regula.dot
-  // on the desktop" brings it back. The browser preview has no menu bar, so there it just hides the pet.
+  // The x on the disc: Regula stays as the dot in the menu bar, where "Show on desktop"
+  // brings it back. The browser preview has no menu bar, so there it just hides the pet.
   const close = () => {
     dispatch({ type: "dismiss-bubble" });
     if (isTauri) void setDesktop(false);
