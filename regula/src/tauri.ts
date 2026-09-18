@@ -25,12 +25,14 @@ export async function getConfig(): Promise<AppConfig> {
   };
 }
 
+/** Opens a cockpit deep link. Rejects when the shell refuses (e.g. not http(s)) so the caller can say so. */
 export async function openLink(url: string): Promise<void> {
   if (isTauri) {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("open_cockpit", { url });
     return;
   }
+  if (!/^https?:\/\//.test(url)) throw new Error("only http(s) links are allowed");
   window.open(url, "_blank", "noopener");
 }
 
@@ -46,10 +48,20 @@ export async function setClickThrough(enabled: boolean): Promise<void> {
   await invoke("set_click_through", { enabled });
 }
 
-export async function onTrayPause(cb: (seconds: number) => void): Promise<void> {
+/** The dropdown's pause entries: "1h", "tomorrow" or "resume"; the web view turns them into seconds. */
+export type PauseChoice = "1h" | "tomorrow" | "resume";
+
+export async function onTrayPause(cb: (choice: PauseChoice) => void): Promise<void> {
   if (!isTauri) return;
   const { listen } = await import("@tauri-apps/api/event");
-  await listen<number>("regula:pause", (e) => cb(e.payload));
+  await listen<PauseChoice>("regula:pause", (e) => cb(e.payload));
+}
+
+/** The shell opened a deep link from the dropdown; the model can retire what was behind it. */
+export async function onTrayOpened(cb: (url: string) => void): Promise<void> {
+  if (!isTauri) return;
+  const { listen } = await import("@tauri-apps/api/event");
+  await listen<string>("regula:opened", (e) => cb(e.payload));
 }
 
 /** The shell owns the click-through check item and applies it to the window; this only mirrors it. */
@@ -59,11 +71,15 @@ export async function onTrayClickThrough(cb: (enabled: boolean) => void): Promis
   await listen<boolean>("regula:click-through", (e) => cb(e.payload));
 }
 
-/** The menu-bar dot mirrors the pose; `count` is shown next to it, `phase` makes Working breathe. */
-export async function setTrayState(pose: string, count: number, phase: number): Promise<void> {
+/**
+ * The menu-bar dot: solid pink, hollow while `count` items wait (the number sits
+ * next to it), muted while offline or paused, grey when disabled. It never
+ * animates; a menu-bar icon that moves is a distraction all day long.
+ */
+export async function setTrayState(pose: string, count: number): Promise<void> {
   if (!isTauri) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("set_tray_state", { pose, count, phase });
+  await invoke("set_tray_state", { pose, count });
 }
 
 /** Opt in or out of the desktop companion; the shell persists it and shows / hides the window. */

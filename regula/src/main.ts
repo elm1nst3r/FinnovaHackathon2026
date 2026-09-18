@@ -13,8 +13,10 @@ import {
   getConfig,
   isTauri,
   onTrayClickThrough,
+  onTrayOpened,
   onTrayPause,
   openLink,
+  type PauseChoice,
   setClickThrough,
   setDesktop,
   setTrayInfo,
@@ -25,8 +27,24 @@ import {
 import type { Input, Pose } from "./types";
 
 const PAUSE_SECONDS = 60 * 60;
+/** "Until tomorrow" means the next morning at this hour, local time. */
+const TOMORROW_HOUR = 8;
 const LOOK_RADIUS_PX = 200;
 const LOOK_MAX_PX = 1.8;
+/** While the cursor rests on the bubble it stays at least this much longer. */
+const BUBBLE_HOLD_MS = 1_500;
+const WELCOMED_KEY = "regula.welcomed";
+
+function secondsUntilTomorrow(now: Date): number {
+  const next = new Date(now);
+  next.setDate(next.getDate() + 1);
+  next.setHours(TOMORROW_HOUR, 0, 0, 0);
+  return Math.max(60, Math.round((next.getTime() - now.getTime()) / 1000));
+}
+
+function pauseSeconds(choice: PauseChoice): number {
+  return choice === "resume" ? 0 : choice === "tomorrow" ? secondsUntilTomorrow(new Date()) : PAUSE_SECONDS;
+}
 
 async function boot() {
   const config = await getConfig();
@@ -56,7 +74,13 @@ async function boot() {
   const feed: Feed = config.mock ? new MockFeed(dispatch, config.cockpit_url) : new SseFeed(dispatch, config.cockpit_url);
 
   // ---------------------------------------------------------------- render
-  const open = (url: string) => void openLink(url);
+  // Opening a link retires what was behind it (a declined note); a refused link is said, not swallowed.
+  const open = (url: string) => {
+    openLink(url).then(
+      () => dispatch({ type: "opened", url }),
+      () => dispatch({ type: "notice", key: "openFailed" }),
+    );
+  };
   const togglePause = () => dispatch({ type: "pause", seconds: model.pausedUntil > Date.now() ? 0 : PAUSE_SECONDS });
   // The x on the disc: Regula stays as the dot in the menu bar, where "Show regula.dot
   // on the desktop" brings it back. The browser preview has no menu bar, so there it just hides the pet.
@@ -72,26 +96,45 @@ async function boot() {
     dirty = true;
   };
 
-  // The menu-bar dot: redrawn only when pose, count or (while Working) the breath phase changes.
+  // The menu-bar dot: redrawn only when pose or count changes. It never animates.
   let trayKey = "";
-  const syncTray = (now: number) => {
+  const syncTray = () => {
     const trayPose = model.disabled ? "disabled" : pose;
-    const phase = trayPose === "working" ? Math.floor(now / 600) % 2 : 0;
     const count = trayCount(model);
-    const key = `${trayPose}:${count}:${phase}`;
+    const key = `${trayPose}:${count}`;
     if (key === trayKey) return;
     trayKey = key;
-    void setTrayState(trayPose, count, phase);
+    void setTrayState(trayPose, count);
   };
 
-  // The dropdown behind the dot: status, counters, last note, items waiting, links and action labels.
+  // The dropdown behind the dot: status (also the dot's tooltip), counters, last note,
+  // items waiting, links and action labels. Ages and the pause countdown change by the
+  // minute, so this runs on every tick and sends only when the wording changed.
   let trayInfoKey = "";
-  const syncTrayInfo = () => {
-    const info = traySummary(model, pose, config.cockpit_url, config.mock);
+  const syncTrayInfo = (now: number) => {
+    const info = traySummary(model, pose, config.cockpit_url, config.mock, { now, clickThrough });
     const key = JSON.stringify(info);
     if (key === trayInfoKey) return;
     trayInfoKey = key;
     void setTrayInfo(info);
+  };
+
+  // First run: one line under the dot saying where regula.dot lives. Remembered per machine.
+  let welcomed = !isTauri;
+  try {
+    welcomed ||= localStorage.getItem(WELCOMED_KEY) === "1";
+  } catch {
+    welcomed = true;
+  }
+  const welcome = () => {
+    if (welcomed || !model.connected) return;
+    welcomed = true;
+    try {
+      localStorage.setItem(WELCOMED_KEY, "1");
+    } catch {
+      /* private mode: say it once anyway */
+    }
+    void showTrayPopup(t("welcome"), null);
   };
 
   // Every new bubble (except the quiet "thinking" one) is also offered to the shell
@@ -113,9 +156,10 @@ async function boot() {
       pose = nextPose;
       rig.setPose(pose);
     }
-    syncTray(now);
-    syncTrayInfo();
+    syncTray();
+    syncTrayInfo(now);
     syncPopup();
+    welcome();
     rig.setRuleId(badgeRuleId(model, pose));
     renderBubble(bubbleEl, model.bubble, { dismiss: () => dispatch({ type: "dismiss-bubble" }), open });
     if (model.disabled) {
@@ -126,11 +170,13 @@ async function boot() {
   };
 
   // 250 ms tick: timers in the model (bubble auto-hide, celebratory poses, pause) expire here.
+  // A bubble under the cursor is being read: it does not expire while hovered.
   setInterval(() => {
     const now = Date.now();
+    if (model.bubble && !bubbleEl.hidden && bubbleEl.matches(":hover")) dispatch({ type: "extend-bubble", until: now + BUBBLE_HOLD_MS });
     dispatch({ type: "tick", now });
     if (dirty) render();
-    else syncTray(now);
+    else syncTrayInfo(now);
   }, 250);
 
   // ---------------------------------------------------------------- close button
@@ -195,8 +241,9 @@ async function boot() {
   });
 
   // ---------------------------------------------------------------- tray
-  await onTrayPause((seconds) => dispatch({ type: "pause", seconds }));
+  await onTrayPause((choice) => dispatch({ type: "pause", seconds: pauseSeconds(choice) }));
   await onTrayClickThrough(applyClickThrough);
+  await onTrayOpened((url) => dispatch({ type: "opened", url }));
 
   feed.start();
   render();

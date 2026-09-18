@@ -37,9 +37,11 @@ export function createRig(): Rig {
   const badgeText = el.querySelector<SVGTextElement>(".badge-text")!;
   const pupils = el.querySelector<SVGGElement>(".pupils")!;
 
-  // Randomised blink: every 4 to 7 s (PRD Idle spec).
+  // Randomised blink: every 4 to 7 s (PRD Idle spec). Not under reduced motion.
+  const reducedMotion = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let blinkTimer: ReturnType<typeof setTimeout> | null = null;
   const scheduleBlink = () => {
+    if (reducedMotion) return;
     blinkTimer = setTimeout(
       () => {
         blink();
@@ -87,7 +89,9 @@ export function createRig(): Rig {
 // the size the menu bar and the handover call for.
 // The mono rule-id pill hangs under the disc, accessories lean on it.
 const SVG = `
-<svg class="pet" xmlns="${NS}" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Regula">
+<svg class="pet" xmlns="${NS}" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="regula.dot">
+  <!-- ghost ring: shown while clicks pass through, so the mode is visible -->
+  <g class="ghost"><circle cx="60" cy="70" r="30" /></g>
   <g class="dashed"><circle cx="60" cy="70" r="34" /></g>
   <g class="ring"><circle cx="60" cy="70" r="31" /></g>
 
@@ -148,10 +152,10 @@ const SVG = `
     </g>
   </g>
 
-  <!-- mono rule-id pill under the disc -->
+  <!-- mono rule-id pill under the disc: 9 px text, the smallest that still reads at 1x -->
   <g class="badge">
-    <rect class="badge-pill" x="35" y="104" width="50" height="11" rx="5.5" />
-    <text class="badge-text mono" x="60" y="111.8" text-anchor="middle"></text>
+    <rect class="badge-pill" x="27" y="103" width="66" height="13" rx="6.5" />
+    <text class="badge-text mono" x="60" y="112.6" text-anchor="middle"></text>
   </g>
 
   <!-- confetti on Granted -->

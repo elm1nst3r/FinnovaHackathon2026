@@ -39,7 +39,9 @@ assert.equal(pose(), "protected");
 assert.equal(badgeRuleId(m, pose()), "CH-ID-01");
 assert.equal(bubbleText(), "CH-ID-01 kept the identifier masked.");
 assert.equal(m.counters.protected, 2);
-advance(TIMEOUTS_MS.protected + 1);
+advance(TIMEOUTS_MS.bubble + 1);
+assert.equal(pose(), "protected", "an actionable bubble (with Open) outlives the 6 s of a plain one");
+advance(TIMEOUTS_MS.protected - TIMEOUTS_MS.bubble);
 assert.equal(pose(), "idle", "Protected → Idle once the bubble is gone");
 assert.equal(m.bubble, null);
 assert.equal(t(m.lastNote!.key, m.lastNote!.params), "CH-ID-01 kept the identifier masked.", "the dropdown keeps the last note");
@@ -53,15 +55,20 @@ assert.equal(trayCount(m), 1, "the menu-bar dot shows one item waiting");
 advance(60_000);
 assert.equal(pose(), "pending", "Pending persists as long as the cockpit says so");
 {
-  const tray = traySummary(m, pose(), cockpit, true);
-  assert.equal(tray.status, "Connected · 1 item waiting for you · Mock feed");
-  assert.equal(tray.counters, "1 open · 2 protected · 1 waiting · 1 granted");
-  assert.deepEqual(tray.note, { text: "Jonas has your Account number (IBAN) request.", url: `${cockpit}/access?item=iban` });
-  assert.deepEqual(tray.items, [{ text: "Account number (IBAN) · CH-ACC-01 · with Jonas Frei", url: `${cockpit}/access?item=iban` }]);
+  const tray = traySummary(m, pose(), cockpit, true, { now });
+  assert.equal(tray.status, "Connected · 1 item waiting · Mock feed");
+  assert.equal(tray.counters, "In the cockpit: 1 open · 2 protected · 1 granted", "cockpit totals are labelled as such and never repeat the dot's number");
+  assert.match(tray.note!.text, /^Jonas has your Account number \(IBAN\) request\. · \d\d:\d\d$/, "the last note carries its time");
+  assert.equal(tray.note!.url, `${cockpit}/access?item=iban`);
+  assert.deepEqual(tray.groups, [
+    { title: "With the approver", items: [{ text: "Account number (IBAN) · with Jonas Frei · 1 min", url: `${cockpit}/access?item=iban` }] },
+  ]);
   assert.equal(tray.details.url, `${cockpit}/access#requests`);
   assert.equal(tray.paused, false);
   assert.equal(tray.actions.desktop, "Show regula.dot on the desktop");
   assert.equal(tray.actions.settings.url, `${cockpit}/settings#regula-dot`);
+  assert.equal(tray.actions.help.url, `${cockpit}/help#regula-dot`);
+  assert.equal(traySummary(m, pose(), cockpit, false, { now, clickThrough: true }).status, "Connected · 1 item waiting · Clicks pass through");
 }
 
 step("Jonas approves for 30 days");
@@ -87,6 +94,22 @@ assert.equal(pose(), "declined");
 assert.equal(bubbleText(), "Jonas left a note. Open it?");
 advance(TIMEOUTS_MS.declined + 1);
 assert.equal(pose(), "idle");
+assert.equal(trayCount(m), 1, "a declined request keeps counting until its note is opened");
+{
+  const tray = traySummary(m, pose(), cockpit, false, { now });
+  assert.equal(tray.groups[0].title, "Needs you");
+  assert.match(tray.groups[0].items[0].text, /declined by Jonas Frei · just now$/);
+  m = reduce(m, { type: "opened", url: tray.groups[0].items[0].url! }, now);
+  assert.equal(trayCount(m), 0, "opening the note retires it");
+}
+m = reduce(m, { type: "notice", key: "openFailed" }, now);
+assert.equal(bubbleText(), "Could not open that page.");
+assert.equal(m.lastNote!.key, "declined", "a notice is not a note");
+m = reduce(m, { type: "extend-bubble", until: now + 60_000 }, now);
+advance(TIMEOUTS_MS.bubble + 1);
+assert.equal(bubbleText(), "Could not open that page.", "a hovered bubble does not expire");
+advance(60_000);
+assert.equal(m.bubble, null);
 
 // Pause hides bubbles and shows the sleeping pose; offline wins over everything but pause.
 m = reduce(m, { type: "pause", seconds: 3600 }, now);
@@ -96,8 +119,8 @@ assert.equal(m.bubble, null, "no bubble while paused");
 step("CH-ID-01 protects the identifier");
 assert.equal(m.bubble, null, "still no bubble while paused");
 assert.equal(m.lastNote!.key, "protected", "but the dropdown still learns what happened");
-assert.equal(traySummary(m, pose(), cockpit, false).status, "Paused · Nothing waiting for you");
-assert.equal(traySummary(m, pose(), cockpit, false).paused, true, "the dropdown offers Resume while paused");
+assert.equal(traySummary(m, pose(), cockpit, false, { now }).status, "Paused, 60 min left · Nothing waiting");
+assert.equal(traySummary(m, pose(), cockpit, false, { now }).paused, true, "the dropdown offers Resume while paused");
 m = reduce(m, { type: "pause", seconds: 0 }, now);
 m = reduce(m, { type: "disconnected" }, now);
 assert.equal(pose(), "offline");
@@ -115,7 +138,7 @@ assert.equal(m, before, "event older than 24 h ignored");
 // Every string stays under 12 words and never carries an emoji.
 for (const lang of ["en", "de"] as const) {
   setLang(lang);
-  for (const key of ["working", "protected", "pending", "granted", "declined", "signoff", "signed", "offline", "approverNew", "trayNothing", "trayOne", "trayMany", "trayCounters", "trayDetails"]) {
+  for (const key of ["working", "protected", "pending", "granted", "declined", "signoff", "signed", "offline", "approverNew", "openFailed", "welcome", "trayNothing", "trayOne", "trayMany", "trayCounters", "trayDetails", "trayPauseTomorrow", "trayHelp"]) {
     const s = t(key, { rule: "CH-ACC-01", label: "Account number (IBAN)", approver: "Jonas", until: "30 Sep", from: "Mira", count: "1", n: "2", open: "1", protected: "2", waiting: "1", granted: "1" });
     assert.ok(s.split(/\s+/).length <= 12, `${lang}.${key} too long: ${s}`);
     assert.ok(!/\p{Extended_Pictographic}/u.test(s), `${lang}.${key} has an emoji`);

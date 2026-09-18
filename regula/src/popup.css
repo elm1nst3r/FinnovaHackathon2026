@@ -55,22 +55,27 @@ body {
   border-radius: 50%;
   background: var(--finnova-pink);
 }
+/* up to two lines, so German sentences and long labels are not cut off */
 .popup-text {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
+/* Open: a real target (28 px tall), not a caption */
 .popup-open {
   flex: none;
   font: inherit;
   font-size: 12px;
+  min-height: 28px;
   border: 1px solid var(--surface-border);
   background: transparent;
   color: var(--finnova-green);
   border-radius: 6px;
-  padding: 2px 8px;
+  padding: 4px 10px;
   cursor: pointer;
 }
 .popup-open:hover { border-color: var(--finnova-green); }

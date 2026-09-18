@@ -122,10 +122,14 @@ struct TrayLink {
 struct TrayActions {
     open_cockpit: String,
     pause: String,
+    #[serde(default)]
+    pause_tomorrow: String,
     resume: String,
     desktop: String,
     click_through: String,
     settings: TrayLink,
+    #[serde(default)]
+    help: TrayLink,
     quit: String,
 }
 
@@ -134,23 +138,34 @@ impl Default for TrayActions {
         TrayActions {
             open_cockpit: "Open cockpit".into(),
             pause: "Pause reactions for 1 h".into(),
+            pause_tomorrow: "Pause reactions until tomorrow".into(),
             resume: "Resume reactions".into(),
             desktop: "Show regula.dot on the desktop".into(),
             click_through: "Let clicks pass through regula.dot".into(),
             settings: TrayLink { text: "Manage settings in the cockpit…".into(), url: None },
+            help: TrayLink { text: "What is regula.dot?".into(), url: None },
             quit: "Quit regula.dot".into(),
         }
     }
 }
 
+/// A titled group of items waiting ("Needs you", "With the approver").
+#[derive(Clone, Default, Serialize, Deserialize)]
+struct TrayGroup {
+    title: String,
+    items: Vec<TrayLink>,
+}
+
 /// The short summary the web view derives from its model (see `src/tray.ts`).
-/// The shell turns it into native menu items above the actions.
+/// The shell turns it into native menu items above the actions; `status` is
+/// also the tooltip of the dot, so the tooltip is localised like the rest.
 #[derive(Clone, Default, Serialize, Deserialize)]
 struct TrayInfo {
     status: String,
     counters: String,
     note: Option<TrayLink>,
-    items: Vec<TrayLink>,
+    #[serde(default)]
+    groups: Vec<TrayGroup>,
     details: Option<TrayLink>,
     #[serde(default)]
     paused: bool,
@@ -181,8 +196,6 @@ const POPUP_GAP: f64 = 4.0;
 // Brand colours, one to one with src/tokens.css.
 const PINK: [f32; 3] = [240.0, 66.0, 190.0];
 const PINK_MUTED: [f32; 3] = [249.0, 182.0, 228.0];
-const NAVY: [f32; 3] = [23.0, 35.0, 59.0];
-const GREEN: [f32; 3] = [31.0, 77.0, 58.0];
 const MUTED: [f32; 3] = [77.0, 86.0, 81.0];
 
 /// Canvas is 36 px, shown at 18 pt in the macOS menu bar (2x). The dot itself
@@ -237,47 +250,23 @@ impl Canvas {
 
 /// The menu-bar dot for a pose. `phase` alternates while Working so the dot
 /// breathes; everything else is a still image.
-fn dot_icon(pose: &str, phase: u8) -> Image<'static> {
+/// The dot has four looks, each legible at 8 pt without relying on colour
+/// alone: solid pink (nothing waiting), a hollow ring while `count` items wait
+/// (the number sits next to it), muted pink while offline or paused, grey when
+/// the cockpit disabled the pet. Transient events (protected, granted,
+/// declined) are said by the popup or bubble, not by the dot, and the dot
+/// never animates: a menu-bar icon that moves is a distraction all day long.
+fn dot_icon(pose: &str, count: u32) -> Image<'static> {
     let c = SIZE as f32 / 2.0;
     let mut cv = Canvas::new();
-    let badge = |cv: &mut Canvas, rgb: [f32; 3]| {
-        let (bx, by, br) = (c + DOT_R * 0.72, c - DOT_R * 0.72, 3.4);
-        cv.cut(bx, by, br + 1.6);
-        cv.disc(bx, by, br, rgb);
+    let colour = match pose {
+        "offline" | "paused" => PINK_MUTED,
+        "disabled" => MUTED,
+        _ => PINK,
     };
-    match pose {
-        "working" => {
-            let r = if phase % 2 == 0 { DOT_R } else { DOT_R - 1.4 };
-            cv.disc(c, c, r, PINK);
-        }
-        "protected" => {
-            cv.disc(c, c, DOT_R, PINK);
-            badge(&mut cv, NAVY);
-        }
-        "pending" => {
-            cv.disc(c, c, DOT_R, PINK);
-            cv.cut(c, c, DOT_R - 2.6);
-        }
-        "granted" => {
-            cv.disc(c, c, DOT_R, PINK);
-            badge(&mut cv, GREEN);
-        }
-        "declined" => {
-            cv.disc(c, c, DOT_R, PINK);
-            badge(&mut cv, MUTED);
-        }
-        "signoff" => {
-            cv.disc(c, c, DOT_R, PINK);
-            badge(&mut cv, NAVY);
-            cv.cut(c + DOT_R * 0.72, c - DOT_R * 0.72, 1.4);
-        }
-        "offline" => cv.disc(c, c, DOT_R, PINK_MUTED),
-        "paused" => {
-            cv.disc(c, c, DOT_R, PINK_MUTED);
-            cv.cut(c, c, DOT_R - 2.6);
-        }
-        "disabled" => cv.disc(c, c, DOT_R, MUTED),
-        _ => cv.disc(c, c, DOT_R, PINK),
+    cv.disc(c, c, DOT_R, colour);
+    if count > 0 && pose != "disabled" {
+        cv.cut(c, c, DOT_R - 2.6);
     }
     cv.into_image()
 }
@@ -310,19 +299,14 @@ fn set_click_through(window: tauri::Window, enabled: bool) -> Result<(), String>
 }
 
 /// The web view reports the derived pose; the shell redraws the menu-bar dot
-/// and shows the number of items waiting on the user next to it.
+/// and shows the number of items waiting next to it. The tooltip comes with
+/// the dropdown summary (`set_tray_info`), so it is localised there.
 #[tauri::command]
-fn set_tray_state(app: AppHandle, pose: String, count: u32, phase: u8) -> Result<(), String> {
+fn set_tray_state(app: AppHandle, pose: String, count: u32) -> Result<(), String> {
     let tray = app.tray_by_id(TRAY_ID).ok_or("no tray")?;
-    tray.set_icon(Some(dot_icon(&pose, phase))).map_err(|e| e.to_string())?;
+    tray.set_icon(Some(dot_icon(&pose, count))).map_err(|e| e.to_string())?;
     let title = if count > 0 { Some(count.to_string()) } else { None };
-    tray.set_title(title).map_err(|e| e.to_string())?;
-    let tip = match pose.as_str() {
-        "offline" => "Regula · cockpit not reachable",
-        "paused" => "Regula · paused",
-        _ => "Regula",
-    };
-    tray.set_tooltip(Some(tip)).map_err(|e| e.to_string())
+    tray.set_title(title).map_err(|e| e.to_string())
 }
 
 /// Opt in or out of the desktop companion. Persisted, mirrored in the tray menu.
@@ -337,6 +321,10 @@ fn set_desktop(app: AppHandle, enabled: bool) -> Result<(), String> {
 #[tauri::command]
 fn set_tray_info(app: AppHandle, info: TrayInfo) -> Result<(), String> {
     let shell = app.try_state::<Shell>().ok_or("no shell")?;
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let tip = if info.status.is_empty() { "regula.dot".to_string() } else { format!("regula.dot · {}", info.status) };
+        let _ = tray.set_tooltip(Some(tip));
+    }
     *shell.info.lock().unwrap() = info;
     refresh_menu(&app).map_err(|e| e.to_string())
 }
@@ -434,9 +422,10 @@ struct BuiltMenu {
 }
 
 /// The dropdown, top to bottom: the summary from the web view (status and
-/// counters as plain lines, the last note, the items waiting), the cockpit
-/// links, one pause / resume entry, the settings (the desktop check item, the
-/// click-through check item, and the link to the rest in the cockpit), quit.
+/// counters as plain lines, the last note, the items waiting under their group
+/// headers), the cockpit links, the pause entries (or one Resume), the
+/// settings (the desktop check item, the click-through check item, the link to
+/// the rest in the cockpit, and what regula.dot is), quit.
 fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bool) -> tauri::Result<BuiltMenu> {
     let menu = Menu::new(app)?;
     let mut links: Vec<String> = Vec::new();
@@ -462,9 +451,13 @@ fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bo
     if let Some(note) = &info.note {
         menu.append(&link_item(&note.text, &note.url)?)?;
     }
-    if !info.items.is_empty() {
+    for group in &info.groups {
+        if group.items.is_empty() {
+            continue;
+        }
         menu.append(&PredefinedMenuItem::separator(app)?)?;
-        for item in &info.items {
+        menu.append(&MenuItem::new(app, &group.title, false, None::<&str>)?)?;
+        for item in &group.items {
             menu.append(&link_item(&item.text, &item.url)?)?;
         }
     }
@@ -476,10 +469,16 @@ fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bo
         menu.append(&link_item(&details.text, &details.url)?)?;
     }
 
-    // Reactions: one entry that reads as the thing you can do right now.
+    // Reactions: while paused only Resume; otherwise the two pause lengths.
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    let pause_label = if info.paused { &a.resume } else { &a.pause };
-    menu.append(&MenuItem::with_id(app, "pause", pause_label, true, None::<&str>)?)?;
+    if info.paused {
+        menu.append(&MenuItem::with_id(app, "resume", &a.resume, true, None::<&str>)?)?;
+    } else {
+        menu.append(&MenuItem::with_id(app, "pause", &a.pause, true, None::<&str>)?)?;
+        if !a.pause_tomorrow.is_empty() {
+            menu.append(&MenuItem::with_id(app, "pause-tomorrow", &a.pause_tomorrow, true, None::<&str>)?)?;
+        }
+    }
 
     // Settings: the desktop companion is the only one kept locally.
     menu.append(&PredefinedMenuItem::separator(app)?)?;
@@ -488,6 +487,9 @@ fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bo
     let click_item = CheckMenuItem::with_id(app, "clickthrough", &a.click_through, desktop, click_through, None::<&str>)?;
     menu.append(&click_item)?;
     menu.append(&link_item(&a.settings.text, &a.settings.url)?)?;
+    if !a.help.text.is_empty() {
+        menu.append(&link_item(&a.help.text, &a.help.url)?)?;
+    }
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     menu.append(&MenuItem::with_id(app, "quit", &a.quit, true, None::<&str>)?)?;
@@ -515,7 +517,7 @@ fn refresh_menu(app: &AppHandle) -> tauri::Result<()> {
 
 fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
     let info = TrayInfo {
-        status: "Regula · starting".to_string(),
+        status: "starting".to_string(),
         ..TrayInfo::default()
     };
     let built = build_menu(app, &info, settings.desktop, false)?;
@@ -533,7 +535,7 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(dot_icon("offline", 0))
         .icon_as_template(false)
-        .tooltip("Regula")
+        .tooltip("regula.dot")
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| {
@@ -544,7 +546,10 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
                     .ok()
                     .and_then(|i| app.state::<Shell>().links.lock().unwrap().get(i).cloned());
                 if let Some(url) = url {
-                    let _ = app.opener().open_url(url, None::<&str>);
+                    if app.opener().open_url(&url, None::<&str>).is_ok() {
+                        // The web view retires what was behind the link (a declined note).
+                        let _ = app.emit("regula:opened", url);
+                    }
                 }
                 return;
             }
@@ -561,8 +566,13 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
                     let _ = app.opener().open_url(url, None::<&str>);
                 }
                 "pause" => {
-                    let paused = app.state::<Shell>().info.lock().unwrap().paused;
-                    let _ = app.emit("regula:pause", if paused { 0 } else { 60 * 60 });
+                    let _ = app.emit("regula:pause", "1h");
+                }
+                "pause-tomorrow" => {
+                    let _ = app.emit("regula:pause", "tomorrow");
+                }
+                "resume" => {
+                    let _ = app.emit("regula:pause", "resume");
                 }
                 "clickthrough" => {
                     let enabled = app
@@ -583,10 +593,11 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(
-            // Remember where the user put Regula, but never its visibility:
-            // that follows the "show on the desktop" setting instead.
+            // Remember where the user put Regula, but never its visibility
+            // (that follows the "show on the desktop" setting) nor its size
+            // (that is fixed in tauri.conf.json, so a shrunk window stays shrunk).
             tauri_plugin_window_state::Builder::default()
-                .with_state_flags(StateFlags::POSITION | StateFlags::SIZE)
+                .with_state_flags(StateFlags::POSITION)
                 .skip_initial_state("popup")
                 .build(),
         )
@@ -616,5 +627,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running Regula");
+        .expect("error while running regula.dot");
 }

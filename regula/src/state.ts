@@ -7,15 +7,19 @@
  * paused) win over idle, and short celebratory poses (protected, granted,
  * declined, working) sit on top until the next event or a timer clears them.
  */
-import type { Counters, Draft, FeedEvent, Input, PendingRequest, Pose, Role, Snapshot, ApproverRequest } from "./types";
+import type { Counters, DeclinedRequest, Draft, FeedEvent, Input, PendingRequest, Pose, Role, Snapshot, ApproverRequest } from "./types";
+import { getLocale } from "./strings";
 
 export const TIMEOUTS_MS = {
-  protected: 6_000, // Protected → Idle when the bubble is dismissed (auto-hide after 6 s)
+  protected: 10_000, // Protected → Idle when its (actionable) bubble is gone
   granted: 8_000,
   declined: 8_000,
-  bubble: 6_000,
+  bubble: 6_000, // a bubble that only informs
+  bubbleAction: 10_000, // a bubble with an Open button needs reading plus a decision
   workingMax: 120_000, // safety net if assistant.done never arrives
   maxEventAge: 24 * 60 * 60 * 1000,
+  /** A declined request drops out of the dropdown after this even if never opened. */
+  maxDeclinedAge: 24 * 60 * 60 * 1000,
 } as const;
 
 export type Transient = {
@@ -48,6 +52,8 @@ export type Model = {
   pending: PendingRequest[];
   drafts: Draft[];
   approverQueue: ApproverRequest[];
+  /** Declined requests, kept until the user opens the approver's note. Local only; not in the snapshot. */
+  declined: DeclinedRequest[];
   transient: Transient | null;
   bubble: Bubble | null;
   lastNote: Note | null;
@@ -68,6 +74,7 @@ export function initialModel(): Model {
     pending: [],
     drafts: [],
     approverQueue: [],
+    declined: [],
     transient: null,
     bubble: null,
     lastNote: null,
@@ -91,7 +98,7 @@ export function derivePose(m: Model, now: number): Pose {
 
 function bubble(m: Model, key: string, params: Record<string, string>, now: number, deepLink?: string): Bubble | null {
   if (m.pausedUntil > now) return null;
-  return { key, params, until: now + TIMEOUTS_MS.bubble, deepLink };
+  return { key, params, until: now + (deepLink ? TIMEOUTS_MS.bubbleAction : TIMEOUTS_MS.bubble), deepLink };
 }
 
 /** Says something: a bubble now (none while paused) and the note the menu-bar dropdown keeps. */
@@ -118,7 +125,14 @@ function firstName(display: string): string {
 function shortDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return d.toLocaleDateString(getLocale(), { day: "numeric", month: "short" });
+}
+
+/** "10:05", in the language Regula speaks. */
+export function shortTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString(getLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 function applyEvent(m: Model, e: FeedEvent, now: number): Model {
@@ -175,6 +189,10 @@ function applyEvent(m: Model, e: FeedEvent, now: number): Model {
       break;
     case "request.declined":
       next.pending = next.pending.filter((p) => p.requestId !== e.requestId);
+      next.declined = [
+        ...next.declined.filter((d) => d.requestId !== e.requestId),
+        { requestId: e.requestId, label: e.label, approver: e.approver, deepLink: e.deepLink, declinedAt: e.time },
+      ];
       next.transient = { pose: "declined", until: now + TIMEOUTS_MS.declined, label: e.label };
       next = say(next, "declined", { approver: firstName(e.approver), label: e.label }, e.time, now, e.deepLink);
       break;
@@ -235,11 +253,22 @@ export function reduce(m: Model, input: Input, now: number = Date.now()): Model 
       const transient = m.transient?.pose === "protected" ? null : m.transient;
       return { ...m, bubble: null, transient };
     }
+    case "extend-bubble":
+      return m.bubble && m.bubble.until < input.until ? { ...m, bubble: { ...m.bubble, until: input.until } } : m;
+    case "opened": {
+      const declined = m.declined.filter((d) => d.deepLink !== input.url);
+      return declined.length === m.declined.length ? m : { ...m, declined };
+    }
+    case "notice":
+      return { ...m, bubble: { key: input.key, params: {}, until: now + TIMEOUTS_MS.bubble } };
     case "tick": {
       let next = m;
       if (next.bubble && next.bubble.until <= input.now) next = { ...next, bubble: null };
       if (next.transient && next.transient.until <= input.now) next = { ...next, transient: null };
       if (next.pausedUntil && next.pausedUntil <= input.now) next = { ...next, pausedUntil: 0 };
+      if (next.declined.some((d) => input.now - Date.parse(d.declinedAt) > TIMEOUTS_MS.maxDeclinedAge)) {
+        next = { ...next, declined: next.declined.filter((d) => input.now - Date.parse(d.declinedAt) <= TIMEOUTS_MS.maxDeclinedAge) };
+      }
       return next;
     }
   }
@@ -252,7 +281,11 @@ export function badgeRuleId(m: Model, pose: Pose): string | null {
   return null;
 }
 
-/** Items waiting on the user, shown as a number next to the menu-bar dot. */
+/**
+ * Items waiting, shown as the one number next to the menu-bar dot: everything
+ * listed in the dropdown (own requests with an approver, drafts needing sign-off,
+ * declined requests not yet opened, and for approvers the requests sent to them).
+ */
 export function trayCount(m: Model): number {
-  return m.pending.length + m.drafts.length + (m.role === "approver" ? m.approverQueue.length : 0);
+  return m.pending.length + m.drafts.length + m.declined.length + (m.role === "approver" ? m.approverQueue.length : 0);
 }

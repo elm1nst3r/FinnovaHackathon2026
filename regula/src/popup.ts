@@ -8,7 +8,10 @@
 
 type Payload = { text: string; deepLink: string | null; openLabel: string };
 
+/** Informational lines go after 6 s; a line with an Open button gets 10 s and stays while hovered. */
 const AUTO_HIDE_MS = 6_000;
+const AUTO_HIDE_ACTION_MS = 10_000;
+const HOVER_GRACE_MS = 1_500;
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const el = document.getElementById("popup")!;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -57,8 +60,16 @@ async function show(p: Payload) {
   el.onclick = () => void hide();
   el.hidden = false;
 
-  if (timer) clearTimeout(timer);
-  timer = setTimeout(() => void hide(), AUTO_HIDE_MS);
+  const arm = (ms: number) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => void hide(), ms);
+  };
+  arm(p.deepLink ? AUTO_HIDE_ACTION_MS : AUTO_HIDE_MS);
+  el.onmouseenter = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
+  el.onmouseleave = () => arm(HOVER_GRACE_MS);
 
   if (isTauri) {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");

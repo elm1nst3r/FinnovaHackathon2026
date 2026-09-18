@@ -31,6 +31,15 @@ export type Draft = {
   deepLink: string;
 };
 
+/** A declined request stays listed until the user opens the approver's note (or 24 h pass). */
+export type DeclinedRequest = {
+  requestId: string;
+  label: string;
+  approver: string;
+  deepLink: string;
+  declinedAt: string;
+};
+
 export type ApproverRequest = {
   requestId: string;
   label: string;
@@ -89,6 +98,12 @@ export type Input =
   | { type: "disconnected" }
   | { type: "pause"; seconds: number }
   | { type: "dismiss-bubble" }
+  /** The cursor rests on the bubble: keep it until at least `until`. */
+  | { type: "extend-bubble"; until: number }
+  /** The user opened a deep link (bubble, popup or dropdown); declined items behind it are done. */
+  | { type: "opened"; url: string }
+  /** A short bubble with no deep link and no note, e.g. "Could not open that page." */
+  | { type: "notice"; key: string }
   | { type: "tick"; now: number };
 
 export type Pose =
