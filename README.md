@@ -77,6 +77,20 @@ npm run serve         # policy service + cockpit on http://127.0.0.1:8787
 Open <http://127.0.0.1:8787/>. Identity is mocked: use the **demo identity**
 picker in the header to switch persona.
 
+#### Serving it as `cockpit.finnova.local`
+
+For the demo the cockpit lives at <http://cockpit.finnova.local/>. One script
+adds the hosts entry and a loopback port redirect (80 → 8787), so the service
+keeps running unprivileged on 8787:
+
+```bash
+scripts/local-host.sh up     # asks for sudo once; 'down' removes the redirect
+npm run serve
+```
+
+The extension talks to `http://cockpit.finnova.local`, so run this before
+loading it. Without the redirect, `sudo PORT=80 npm run serve` also works.
+
 | Persona | Sees |
 |---|---|
 | **Anna Berger** | Employee view only |
@@ -96,8 +110,8 @@ prompt; the cockpit never does.
 2. **Load unpacked** → select `dist/extension/`
 3. Open ChatGPT, Copilot or Gemini and type something with an IBAN or a name in it
 
-The extension talks to `http://127.0.0.1:8787`, so the service must be running
-the first time. After that it works from its own cache — stop the service and
+The extension talks to `http://cockpit.finnova.local`, so the service must be
+running behind that name the first time (see above). After that it works from its own cache — stop the service and
 it keeps enforcing the last known good policy set, flagging the age once the
 cache passes 24 hours.
 

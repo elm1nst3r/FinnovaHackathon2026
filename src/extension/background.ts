@@ -10,7 +10,7 @@ import type { AskMessage, AskReply } from './ask-verdict.ts';
 import { PolicySync, describeStaleness } from './sync.ts';
 import type { SyncStatus } from './sync.ts';
 
-const SERVICE_URL = 'http://127.0.0.1:8787';
+const SERVICE_URL = 'http://cockpit.finnova.local';
 const IDENTITY_KEY = 'aig.identity';
 const DEFAULT_IDENTITY = 'u-anna';
 const REFRESH_MINUTES = 15;
