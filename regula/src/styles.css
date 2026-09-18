@@ -1,0 +1,320 @@
+@import "./tokens.css";
+
+/* ---------------------------------------------------------------- shell */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--surface-text);
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+#stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#pet {
+  /* the companion: 120 px canvas, the disc itself is 52 px */
+  position: absolute;
+  right: 14px;
+  bottom: 6px;
+  width: 120px;
+  height: 120px;
+  cursor: grab;
+}
+#pet:active {
+  cursor: grabbing;
+}
+
+/* ---------------------------------------------------------------- rig base */
+.pet {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pet * {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform var(--transition) var(--ease),
+    opacity var(--transition) var(--ease),
+    fill var(--transition) var(--ease);
+}
+.pet .disc { fill: var(--finnova-pink); }
+.pet .eye { fill: var(--finnova-navy); }
+.pet .spark { fill: var(--paper); opacity: 0.9; }
+.pet .lid { fill: var(--finnova-pink); transform-origin: center top; transform: scaleY(0); }
+.pet .brow { fill: none; stroke: var(--finnova-navy); stroke-width: 1.6; stroke-linecap: round; opacity: 0; }
+.pet .mouth { fill: none; stroke: var(--finnova-navy); stroke-width: 1.6; stroke-linecap: round; }
+.pet .mouth-flat { opacity: 0; }
+.pet .sleep-eyes path { fill: none; stroke: var(--finnova-navy); stroke-width: 1.8; stroke-linecap: round; opacity: 0; }
+.pet .pupils { transform: translate(var(--lx, 0px), var(--ly, 0px)); transition: transform 120ms var(--ease); }
+
+.pet .breath, .pet .hop, .pet .body { transform-box: view-box; transform-origin: 60px 96px; }
+.pet .face { transform-box: view-box; transform-origin: 60px 70px; }
+
+/* rule-id pill: hidden unless a rule id is relevant */
+.pet .badge { opacity: 0; transform: translateY(3px); }
+.pet.has-badge .badge { opacity: 1; transform: none; }
+.pet .badge-pill { fill: var(--finnova-navy); }
+.pet .badge-text { fill: var(--paper); font-family: var(--font-mono); font-size: 6.4px; letter-spacing: 0.2px; }
+
+/* props: hidden unless a pose shows them */
+.pet .dashed circle { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; opacity: 0; }
+.pet .ring circle { transform-box: view-box; fill: none; stroke: var(--finnova-navy); stroke-width: 1.6; stroke-dasharray: 1.5 6; stroke-linecap: round; opacity: 0; transform-origin: 60px 70px; }
+.pet .shield { transform-box: view-box; opacity: 0; transform: translate(78px, 88px); transform-origin: 0 0; }
+.pet .shield-shape { fill: var(--protect); stroke: var(--finnova-navy); stroke-width: 1.6; stroke-linejoin: round; transform-box: view-box; transform-origin: 0 0; }
+.pet .confetti rect { opacity: 0; }
+.pet .confetti .c1 { fill: var(--granted); }
+.pet .confetti .c2 { fill: var(--finnova-green); }
+.pet .confetti .c3 { fill: var(--protect); }
+.pet .pencil path { fill: none; stroke: var(--finnova-green); stroke-width: 3; stroke-linecap: round; opacity: 0; }
+.pet .pencil .tip { fill: var(--finnova-navy); stroke: none; stroke-width: 0; }
+.pet .sheet { opacity: 0; transform: rotate(6deg); }
+.pet .sheet rect { fill: var(--paper); stroke: var(--border); stroke-width: 1; }
+.pet .sheet path { fill: none; stroke: var(--muted); stroke-width: 1; }
+.pet .zzz text { font-family: var(--font-serif); font-style: italic; font-size: 9px; fill: var(--muted); opacity: 0; }
+.pet .zzz text:nth-child(2) { font-size: 11px; }
+.pet .zzz text:nth-child(3) { font-size: 13px; }
+.pet .badge-offline circle { fill: var(--muted); stroke: var(--paper); stroke-width: 1.5; opacity: 0; }
+.pet .badge-moon path { fill: var(--protect); stroke: var(--finnova-navy); stroke-width: 1.2; opacity: 0; }
+
+/* blink (JS adds .blink for 140 ms) */
+.pet.blink .lid { transform: scaleY(1); transition-duration: 70ms; }
+
+/* ---------------------------------------------------------------- loops */
+/* Motion rules: 300 ms ease-out, no bounce over 4 px, no rotation over 8 deg, squash within 6 % */
+@keyframes breath { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.01, 1.02); } }
+@keyframes ledger-glance { 0%, 94%, 100% { transform: translate(var(--lx, 0px), var(--ly, 0px)); } 96%, 98% { transform: translate(0.5px, 1.8px); } }
+@keyframes ring-spin { to { transform: rotate(360deg); } }
+@keyframes shield-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes glance { 0%, 82%, 100% { transform: translate(var(--lx, 0px), var(--ly, 0px)); } 86%, 96% { transform: translate(1.8px, -1.6px); } }
+@keyframes hop { 0% { transform: translateY(0) scale(1, 1); } 12% { transform: translateY(0) scale(1.05, 0.95); } 40% { transform: translateY(-4px) scale(0.97, 1.03); } 62% { transform: translateY(0) scale(1.04, 0.96); } 80%, 100% { transform: translateY(0) scale(1, 1); } }
+@keyframes confetti-fall { 0% { opacity: 0; transform: translateY(0) rotate(0deg); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(26px) rotate(140deg); } }
+@keyframes nod { 0%, 100% { transform: translateY(2px) rotate(0deg); } 55% { transform: translateY(2px) rotate(0deg); } 65% { transform: translateY(3.5px) rotate(2deg); } 75% { transform: translateY(2px) rotate(0deg); } 85% { transform: translateY(3px) rotate(2deg); } }
+@keyframes scan { 0%, 100% { transform: translate(-1.6px, 1px); } 45%, 55% { transform: translate(1.8px, 1px); } }
+@keyframes zzz-float { 0% { opacity: 0; transform: translateY(2px); } 30%, 60% { opacity: 1; } 100% { opacity: 0; transform: translateY(-4px); } }
+
+/* ---------------------------------------------------------------- poses */
+/* Idle: breath (disc scales by 2 %), blink, a glance down at the ledger every ~40 s */
+.pet[data-state="idle"] .breath { animation: breath 3s ease-in-out infinite; }
+.pet[data-state="idle"] .pupils { animation: ledger-glance 40s linear infinite; }
+
+/* Working: eyes narrow in concentration, dotted ring orbits the disc */
+.pet[data-state="working"] .lid { transform: scaleY(0.38); }
+.pet[data-state="working"] .face { transform: translateY(0.5px); }
+.pet[data-state="working"] .breath { animation: breath 1.2s ease-in-out infinite; }
+.pet[data-state="working"] .ring circle { opacity: 1; animation: ring-spin 6s linear infinite; }
+
+/* Protected: shield pops up in front of the disc, brows apologetic, rule id on the pill */
+.pet[data-state="protected"] .shield { opacity: 1; transform: translate(77px, 86px); }
+.pet[data-state="protected"] .shield-shape { animation: shield-sway 2s ease-in-out infinite; }
+.pet[data-state="protected"] .brow { opacity: 1; }
+.pet[data-state="protected"] .brow-l { transform: rotate(8deg); }
+.pet[data-state="protected"] .brow-r { transform: rotate(-8deg); }
+.pet[data-state="protected"] .face { transform: rotate(-3deg); }
+.pet[data-state="protected"] .breath { animation: breath 3s ease-in-out infinite; }
+
+/* Pending: dashed outline, shield parked at the side, looks top-right every 10 s */
+.pet[data-state="pending"] .shield { opacity: 1; transform: translate(89px, 80px) scale(0.72); }
+.pet[data-state="pending"] .dashed circle { opacity: 1; }
+.pet[data-state="pending"] .breath { animation: breath 4s ease-in-out infinite; }
+.pet[data-state="pending"] .pupils { animation: glance 10s ease-in-out infinite; }
+
+/* Granted: one hop with squash and stretch, shield turns green, three confetti squares */
+.pet[data-state="granted"] .shield { opacity: 1; transform: translate(77px, 86px); }
+.pet[data-state="granted"] .shield-shape { fill: var(--granted); }
+.pet[data-state="granted"].oneshot .hop { animation: hop 1.5s var(--ease) 1; }
+.pet[data-state="granted"].oneshot .confetti rect { animation: confetti-fall 1.5s ease-out 1; }
+.pet[data-state="granted"] .confetti .c2 { animation-delay: 120ms; }
+.pet[data-state="granted"] .confetti .c3 { animation-delay: 240ms; }
+.pet[data-state="granted"] .breath { animation: breath 3s ease-in-out infinite; }
+
+/* Declined: disc sinks 2 px, eyes drop, mouth flattens, then a small nod */
+.pet[data-state="declined"] .body { transform: translateY(2px); }
+.pet[data-state="declined"] .pupils { transform: translate(var(--lx, 0px), calc(var(--ly, 0px) + 1.5px)); }
+.pet[data-state="declined"] .lid { transform: scaleY(0.45); }
+.pet[data-state="declined"] .mouth-smile { opacity: 0; }
+.pet[data-state="declined"] .mouth-flat { opacity: 1; }
+.pet[data-state="declined"].oneshot .body { animation: nod 2s var(--ease) 1; }
+
+/* Sign-off: pencil leans on the disc, sheet at its foot, eyes scan a line */
+.pet[data-state="signoff"] .pencil path { opacity: 1; }
+.pet[data-state="signoff"] .sheet { opacity: 1; }
+.pet[data-state="signoff"] .pupils { animation: scan 3s ease-in-out infinite; }
+.pet[data-state="signoff"] .breath { animation: breath 3s ease-in-out infinite; }
+
+/* Offline: eyes closed, zzz, grey dot badge, disc fades to the muted pink. Paused: same with a moon badge */
+.pet[data-state="offline"] .disc,
+.pet[data-state="paused"] .disc { fill: var(--pink-muted); }
+.pet[data-state="offline"] .lid,
+.pet[data-state="paused"] .lid { fill: var(--pink-muted); transform: scaleY(1); }
+.pet[data-state="offline"] .sleep-eyes path,
+.pet[data-state="paused"] .sleep-eyes path { opacity: 1; }
+.pet[data-state="offline"] .zzz text,
+.pet[data-state="paused"] .zzz text { animation: zzz-float 5s ease-in-out infinite; }
+.pet[data-state="offline"] .zzz text:nth-child(2),
+.pet[data-state="paused"] .zzz text:nth-child(2) { animation-delay: 0.8s; }
+.pet[data-state="offline"] .zzz text:nth-child(3),
+.pet[data-state="paused"] .zzz text:nth-child(3) { animation-delay: 1.6s; }
+.pet[data-state="offline"] .body,
+.pet[data-state="paused"] .body { transform: translateY(2px); }
+.pet[data-state="offline"] .breath,
+.pet[data-state="paused"] .breath { animation: breath 5s ease-in-out infinite; }
+.pet[data-state="offline"] .badge-offline circle { opacity: 1; }
+.pet[data-state="paused"] .badge-moon path { opacity: 1; }
+
+/* Reduced motion: keep the poses, drop the loops, fade instead of hop */
+@media (prefers-reduced-motion: reduce) {
+  .pet * { animation: none !important; }
+  .pet[data-state="granted"] .confetti rect { opacity: 0.9; }
+}
+
+/* ---------------------------------------------------------------- bubble */
+#bubble {
+  position: absolute;
+  right: 112px;
+  bottom: 72px;
+  max-width: 230px;
+  padding: 8px 10px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--surface-text);
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  animation: bubble-in var(--transition) var(--ease);
+}
+#bubble::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  bottom: 14px;
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--surface-border);
+  border-top: 1px solid var(--surface-border);
+  transform: rotate(45deg);
+}
+@keyframes bubble-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.bubble-open {
+  flex: none;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--surface-border);
+  background: transparent;
+  color: var(--finnova-green);
+  border-radius: 6px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+@media (prefers-color-scheme: dark) { .bubble-open { color: var(--granted); } }
+
+/* ---------------------------------------------------------------- card */
+#card {
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  width: 320px;
+  max-height: 240px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--surface-text);
+  overflow: hidden;
+  animation: bubble-in var(--transition) var(--ease);
+}
+.card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--surface-header);
+  color: var(--surface-header-text);
+}
+.card-header .brand { font-family: var(--font-serif); font-size: 15px; letter-spacing: 0.2px; }
+.card-header .brand-dot { display: inline-block; width: 5px; height: 5px; margin-left: 1px; border-radius: 50%; background: var(--finnova-pink); vertical-align: baseline; }
+.card-header .card-title { font-family: var(--font-serif); font-size: 15px; opacity: 0.75; }
+.card-header .role { margin-left: auto; font-size: 10px; opacity: 0.7; }
+.mono { font-family: var(--font-mono); }
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 8px 12px 4px;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 8px;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+}
+.tile .num { font-size: 17px; line-height: 1.1; }
+.tile .lbl { font-size: 10.5px; color: var(--surface-muted); }
+.tile.protected { background: var(--protect); color: var(--ink); }
+.tile.protected .lbl { color: var(--muted); }
+.tile.granted { background: var(--granted); color: var(--ink); }
+.tile.granted .lbl { color: var(--muted); }
+
+.lists { flex: 1; overflow-y: auto; padding: 2px 12px 4px; }
+.lists h3 { margin: 6px 0 2px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--surface-muted); }
+.row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--surface-border); }
+.row:first-of-type { border-top: 0; }
+.row .info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row .label { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .meta { font-size: 11px; color: var(--surface-muted); }
+.empty { margin: 8px 0; color: var(--surface-muted); font-size: 12px; }
+
+.btn {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+  background: transparent;
+  color: var(--surface-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--finnova-green); }
+.btn.on { background: var(--protect); color: var(--ink); }
+.btn-primary { background: var(--finnova-green); border-color: var(--finnova-green); color: var(--paper); }
+.btn-primary:hover { filter: brightness(1.12); }
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 7px;
+  border-top: 1px solid var(--surface-border);
+  font-size: 11px;
+  color: var(--surface-muted);
+}
+.card-footer .actions { margin-left: auto; display: flex; gap: 5px; }
+.status { display: inline-flex; align-items: center; gap: 5px; }
+.status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--finnova-green); }
+.status-offline .dot { background: var(--muted); }
+.status-paused .dot { background: var(--protect); border: 1px solid var(--muted); box-sizing: border-box; }
+.hint { margin: 0; padding: 3px 12px 6px; font-size: 9.5px; color: var(--surface-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* click-through indicator on the pet */
+#stage.click-through #pet { opacity: 0.85; }

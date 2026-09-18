@@ -1,0 +1,43 @@
+/* Finnova AI Cockpit design tokens, one to one (PRD "Brand and visual design").
+   The disc uses the two colours of the finnova logo: pink full stop, navy wordmark.
+   Re-skin = edit this file. */
+:root {
+  --finnova-pink: #f042be;
+  --finnova-navy: #17233b;
+  --pink-muted: #f9b6e4;
+  --ink: #16201c;
+  --paper: #f6f4ee;
+  --finnova-green: #1f4d3a;
+  --muted: #4d5651;
+  --border: #dedacf;
+  --protect: #fbebc8;
+  --granted: #ddefe4;
+  --nav: #2a3832;
+
+  --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Instrument Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius: 10px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition: 300ms;
+
+  /* card / bubble surfaces follow the OS theme; Regula itself does not change */
+  --surface: var(--paper);
+  --surface-text: var(--ink);
+  --surface-muted: var(--muted);
+  --surface-border: var(--border);
+  --surface-header: var(--nav);
+  --surface-header-text: var(--paper);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: var(--ink);
+    --surface-text: var(--paper);
+    --surface-muted: #b5bdb7;
+    --surface-border: #2f3a34;
+    --surface-header: var(--nav);
+    --surface-header-text: var(--paper);
+  }
+}
