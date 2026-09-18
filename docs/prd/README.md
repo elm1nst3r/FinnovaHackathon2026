@@ -16,3 +16,17 @@
   the `CH-AI-*` range.
 - Decision outcomes are written `ALLOW`, `MAKE_SAFE`, `BLOCK` in code, events
   and rules; in prose "ALLOW", "MAKE SAFE", "BLOCK".
+
+## Where requirements live
+
+The PRD owns the **why**: the problem, the product decisions and their rationale,
+and the priorities. Binding **requirements and acceptance scenarios** for the
+cockpit live in OpenSpec, not here:
+
+```text
+openspec/changes/add-ai-guard-cockpit/
+```
+
+One requirement, one source. When the two disagree, the spec wins and the PRD
+gets corrected.
+
