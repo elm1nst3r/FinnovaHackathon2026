@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot success, task complete">
+  <ellipse cx="100" cy="176" rx="46" ry="8" fill="#0F1A3C" opacity="0.08"/>
+  <g stroke="#F042BE" stroke-width="5" stroke-linecap="round">
+    <line x1="150" y1="34" x2="164" y2="24"/>
+    <line x1="140" y1="24" x2="147" y2="10"/>
+    <line x1="50" y1="34" x2="36" y2="24"/>
+    <line x1="60" y1="24" x2="53" y2="10"/>
+  </g>
+  <circle cx="100" cy="100" r="70" fill="#F042BE"/>
+  <path d="M72 102 Q84 86 96 102" fill="none" stroke="#0F1A3C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M104 102 Q116 86 128 102" fill="none" stroke="#0F1A3C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M82 122 Q100 140 118 122" fill="none" stroke="#0F1A3C" stroke-width="6.5" stroke-linecap="round"/>
+</svg>

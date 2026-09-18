@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Dot — Character Assets</title>
+<style>
+  :root { --pink:#F042BE; --ink:#0F1A3C; --bg:#F5F6F9; --card:#FFFFFF; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:40px 32px 8px; }
+  h1 { margin:0; font-size:56px; letter-spacing:-2px; }
+  h1 span { color:var(--pink); }
+  .sub { color:#5b6472; font-size:18px; margin:6px 0 0; }
+  .tag { display:inline-block; margin-top:10px; height:4px; width:64px; background:var(--pink); border-radius:2px; }
+  section { padding:24px 32px; }
+  h2 { font-size:20px; margin:0 0 16px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px; }
+  .card { background:var(--card); border-radius:16px; padding:14px; text-align:center; box-shadow:0 1px 3px rgba(15,26,60,.06); }
+  .card img { width:100%; height:120px; object-fit:contain; }
+  .card .name { margin-top:8px; font-size:13px; color:#5b6472; }
+  .swatch { display:flex; align-items:center; gap:12px; }
+  .chip { width:40px; height:40px; border-radius:10px; border:1px solid rgba(15,26,60,.1); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Dot</span> — Character Assets</h1>
+  <p class="sub">Always nearby for a brighter day. &nbsp;·&nbsp; Base color <b>#F042BE</b> · RGB(240, 66, 190)</p>
+  <div class="tag"></div>
+</header>
+
+<section>
+  <h2>Base</h2>
+  <div class="grid">
+    <div class="card"><img src="base/dot-base.svg" alt="base"/><div class="name">base</div></div>
+    <div class="card"><img src="base/dot-size-examples.svg" alt="sizes"/><div class="name">size examples</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Expressions</h2>
+  <div class="grid" id="expressions"></div>
+</section>
+
+<section>
+  <h2>Gestures &amp; Actions</h2>
+  <div class="grid" id="gestures"></div>
+</section>
+
+<section>
+  <h2>States</h2>
+  <div class="grid" id="states"></div>
+</section>
+
+<section>
+  <h2>In Context</h2>
+  <div class="grid" id="context"></div>
+</section>
+
+<script>
+const sets = {
+  expressions: ["neutral","happy","excited","curious","thinking","angry","surprised","wink","thumbs-up","shield","safety-warning"],
+  gestures: ["follow-mouse","bounce","wave","point-nudge","peek"],
+  states: ["thinking-glow","notification","working","success","sleeping"],
+  context: ["keeps-you-company","stays-close","always-nearby","positive-encouragement"]
+};
+for (const [folder, items] of Object.entries(sets)) {
+  const el = document.getElementById(folder);
+  el.innerHTML = items.map(n =>
+    `<div class="card"><img src="${folder}/dot-${n}.svg" alt="${n}"/><div class="name">${n.replace(/-/g,' ')}</div></div>`
+  ).join("");
+}
+</script>
+</body>
+</html>

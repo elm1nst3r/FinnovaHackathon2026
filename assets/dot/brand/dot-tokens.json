@@ -1,0 +1,27 @@
+{
+  "name": "Dot",
+  "tagline": "Always nearby for a brighter day.",
+  "personality": ["Curious", "Supportive", "Expressive", "Always around"],
+  "colors": {
+    "base": { "hex": "#F042BE", "rgb": [240, 66, 190], "usage": "Body, accents, motion lines" },
+    "ink": { "hex": "#0F1A3C", "rgb": [15, 26, 60], "usage": "Pupils, text, shadows" },
+    "eyeWhite": { "hex": "#FFFFFF", "rgb": [255, 255, 255], "usage": "Eyes" },
+    "shadow": { "hex": "#0F1A3C", "opacity": 0.08, "usage": "Ground shadow" },
+    "warning": { "hex": "#F5A623", "rgb": [245, 166, 35], "usage": "Safety / warning triangle" },
+    "shield": { "hex": "#9AA3B2", "rgb": [154, 163, 178], "usage": "Shield emblem" },
+    "bubble": { "hex": "#E9ECF2", "rgb": [233, 236, 242], "usage": "Speech bubble fill" }
+  },
+  "sizes": {
+    "onScreenPx": [16, 24, 32, 48, 64],
+    "note": "Simple. Friendly. Works everywhere."
+  },
+  "geometry": {
+    "viewBox": "0 0 200 200",
+    "body": { "cx": 100, "cy": 100, "r": 70 },
+    "groundShadow": { "cx": 100, "cy": 176, "rx": 46, "ry": 8 },
+    "eyes": {
+      "left":  { "white": { "cx": 84,  "cy": 96, "rx": 16, "ry": 21 }, "pupil": { "cx": 91,  "cy": 100, "r": 8 } },
+      "right": { "white": { "cx": 122, "cy": 92, "rx": 16, "ry": 21 }, "pupil": { "cx": 129, "cy": 96,  "r": 8 } }
+    }
+  }
+}

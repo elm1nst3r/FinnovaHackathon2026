@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 170" width="240" height="170" role="img" aria-label="Dot gives positive encouragement">
+  <ellipse cx="70" cy="146" rx="38" ry="7" fill="#0F1A3C" opacity="0.08"/>
+  <circle cx="70" cy="86" r="52" fill="#F042BE"/>
+  <ellipse cx="58" cy="82" rx="12" ry="16" fill="#FFFFFF"/>
+  <ellipse cx="86" cy="80" rx="12" ry="16" fill="#FFFFFF"/>
+  <circle cx="63" cy="86" r="6" fill="#0F1A3C"/>
+  <circle cx="91" cy="84" r="6" fill="#0F1A3C"/>
+  <circle cx="65.5" cy="82.5" r="1.9" fill="#FFFFFF"/>
+  <circle cx="93.5" cy="80.5" r="1.9" fill="#FFFFFF"/>
+  <path d="M56 106 Q70 118 84 106" fill="none" stroke="#0F1A3C" stroke-width="5" stroke-linecap="round"/>
+  <!-- speech bubble -->
+  <g>
+    <rect x="128" y="30" width="98" height="46" rx="14" fill="#E9ECF2"/>
+    <path d="M132 66 L120 84 L146 70 Z" fill="#E9ECF2"/>
+    <text x="177" y="59" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#0F1A3C">You got this!</text>
+  </g>
+</svg>

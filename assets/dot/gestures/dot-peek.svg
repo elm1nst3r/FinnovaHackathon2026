@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot peeks from behind an edge">
+  <ellipse cx="86" cy="176" rx="40" ry="7" fill="#0F1A3C" opacity="0.08"/>
+  <!-- Dot, partly clipped by the edge -->
+  <clipPath id="peekClip"><rect x="0" y="0" width="126" height="200"/></clipPath>
+  <g clip-path="url(#peekClip)">
+    <circle cx="86" cy="100" r="66" fill="#F042BE"/>
+    <ellipse cx="86" cy="96" rx="15" ry="20" fill="#FFFFFF"/>
+    <ellipse cx="120" cy="92" rx="15" ry="20" fill="#FFFFFF"/>
+    <circle cx="93" cy="100" r="7.5" fill="#0F1A3C"/>
+    <circle cx="127" cy="96" r="7.5" fill="#0F1A3C"/>
+    <circle cx="95.5" cy="96.5" r="2.2" fill="#FFFFFF"/>
+    <circle cx="129.5" cy="92.5" r="2.2" fill="#FFFFFF"/>
+  </g>
+  <!-- window / panel edge -->
+  <rect x="126" y="18" width="6" height="164" rx="3" fill="#0F1A3C" opacity="0.75"/>
+</svg>
