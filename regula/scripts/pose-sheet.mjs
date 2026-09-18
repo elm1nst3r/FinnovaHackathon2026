@@ -12,7 +12,7 @@ const svg = src
 const tokens = fs.readFileSync(path.join(root, "src/tokens.css"), "utf8");
 const styles = fs.readFileSync(path.join(root, "src/styles.css"), "utf8").replace('@import "./tokens.css";', "");
 const poses = ["idle", "working", "protected", "pending", "granted", "declined", "signoff", "offline", "paused"];
-const badge = { protected: "CH-ID-01", pending: "CH-ACC-01" };
+const badge = { protected: "CH-ACC-01", pending: "CH-ACC-01" };
 
 let sheet = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 300" width="650" height="300"><style>${tokens}${styles} .pet *{transition:none!important;animation:none!important}</style><rect width="100%" height="100%" fill="#fff"/>`;
 poses.forEach((p, i) => {

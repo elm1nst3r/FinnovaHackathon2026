@@ -10,7 +10,8 @@ type Table = Record<string, string>;
 const en: Table = {
   // bubbles
   working: "Thinking with the assistant.",
-  protected: "{rule} kept the {label} masked.",
+  protectedTitle: "Protected for you",
+  protected: "I've masked the {label}. The rest is safe to use.",
   pending: "{approver} has your {label} request.",
   granted: "Granted until {until}. Nice.",
   declined: "{approver} left a note. Open it?",
@@ -23,6 +24,7 @@ const en: Table = {
   welcome: "regula.dot lives in your menu bar. Click the dot for more.",
   // pet
   openBtn: "Open",
+  requestBtn: "Request access",
   close: "Hide regula.dot (the dot stays in the menu bar)",
   status_connected: "Connected",
   status_offline: "Offline",
@@ -55,6 +57,7 @@ const en: Table = {
   trayResume: "Resume reactions",
   trayDesktop: "Show regula.dot on the desktop",
   trayClickThrough: "Let clicks pass through regula.dot",
+  trayPopups: "Show notes under the dot while regula.dot is hidden",
   traySettings: "Manage settings in the cockpit…",
   trayHelp: "What is regula.dot?",
   trayQuit: "Quit regula.dot",
@@ -62,7 +65,8 @@ const en: Table = {
 
 const de: Table = {
   working: "Denke mit dem Assistenten.",
-  protected: "{rule} hat {label} maskiert gelassen.",
+  protectedTitle: "Für dich geschützt",
+  protected: "Ich habe {label} maskiert. Der Rest ist sicher.",
   pending: "{approver} hat deine Anfrage: {label}.",
   granted: "Freigegeben bis {until}. Schön.",
   declined: "{approver} hat eine Notiz hinterlassen. Öffnen?",
@@ -74,6 +78,7 @@ const de: Table = {
   openFailed: "Seite konnte nicht geöffnet werden.",
   welcome: "regula.dot wohnt in der Menüleiste. Klick den Punkt für mehr.",
   openBtn: "Öffnen",
+  requestBtn: "Zugriff anfragen",
   close: "regula.dot ausblenden (der Punkt bleibt in der Menüleiste)",
   status_connected: "Verbunden",
   status_offline: "Offline",
@@ -104,6 +109,7 @@ const de: Table = {
   trayResume: "Reaktionen fortsetzen",
   trayDesktop: "regula.dot auf dem Desktop zeigen",
   trayClickThrough: "Klicks durch regula.dot durchlassen",
+  trayPopups: "Hinweise unter dem Punkt zeigen, wenn regula.dot verborgen ist",
   traySettings: "Einstellungen im Cockpit verwalten…",
   trayHelp: "Was ist regula.dot?",
   trayQuit: "regula.dot beenden",
@@ -124,6 +130,19 @@ export function getLang(): Lang {
 /** BCP 47 tag for dates and times, so they follow `--lang`, not the OS locale. */
 export function getLocale(): string {
   return current === "de" ? "de-CH" : "en-GB";
+}
+
+/** Bubbles that carry a title line and their own button label (the protection tooltip). */
+const titled: Record<string, { title: string; open: string }> = {
+  protected: { title: "protectedTitle", open: "requestBtn" },
+};
+
+export function bubbleTitle(key: string): string | null {
+  return titled[key] ? t(titled[key].title) : null;
+}
+
+export function bubbleOpenLabel(key: string): string {
+  return t(titled[key]?.open ?? "openBtn");
 }
 
 export function t(key: string, params: Record<string, string> = {}): string {

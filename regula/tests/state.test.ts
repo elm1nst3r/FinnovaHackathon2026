@@ -28,23 +28,23 @@ assert.equal(pose(), "offline", "starts offline until the feed connects");
 m = reduce(m, { type: "snapshot", snapshot: mockSnapshot(cockpit) }, now);
 m = reduce(m, { type: "connected" }, now);
 assert.equal(pose(), "idle");
-assert.deepEqual(m.counters, { open: 2, protected: 1, waiting: 0, granted: 1 });
+assert.deepEqual(m.counters, { open: 3, protected: 5, waiting: 0, granted: 1 });
 
 step("Mira asks the assistant");
 assert.equal(pose(), "working");
 assert.equal(bubbleText(), "Thinking with the assistant.");
 
-step("CH-ID-01 protects the identifier");
+step("CH-ACC-01 masks the account number");
 assert.equal(pose(), "protected");
-assert.equal(badgeRuleId(m, pose()), "CH-ID-01");
-assert.equal(bubbleText(), "CH-ID-01 kept the identifier masked.");
-assert.equal(m.counters.protected, 2);
+assert.equal(badgeRuleId(m, pose()), "CH-ACC-01");
+assert.equal(bubbleText(), "I've masked the account number. The rest is safe to use.");
+assert.equal(m.counters.protected, 5, "the account number was already counted as protected");
 advance(TIMEOUTS_MS.bubble + 1);
 assert.equal(pose(), "protected", "an actionable bubble (with Open) outlives the 6 s of a plain one");
 advance(TIMEOUTS_MS.protected - TIMEOUTS_MS.bubble);
 assert.equal(pose(), "idle", "Protected → Idle once the bubble is gone");
 assert.equal(m.bubble, null);
-assert.equal(t(m.lastNote!.key, m.lastNote!.params), "CH-ID-01 kept the identifier masked.", "the dropdown keeps the last note");
+assert.equal(t(m.lastNote!.key, m.lastNote!.params), "I've masked the account number. The rest is safe to use.", "the dropdown keeps the last note");
 
 step("Mira requests the IBAN from Jonas");
 assert.equal(pose(), "pending");
@@ -57,7 +57,7 @@ assert.equal(pose(), "pending", "Pending persists as long as the cockpit says so
 {
   const tray = traySummary(m, pose(), cockpit, true, { now });
   assert.equal(tray.status, "Connected · 1 item waiting · Mock feed");
-  assert.equal(tray.counters, "In the cockpit: 1 open · 2 protected · 1 granted", "cockpit totals are labelled as such and never repeat the dot's number");
+  assert.equal(tray.counters, "In the cockpit: 3 open · 4 protected · 1 granted", "cockpit totals are labelled as such and never repeat the dot's number");
   assert.match(tray.note!.text, /^Jonas has your Account number \(IBAN\) request\. · \d\d:\d\d$/, "the last note carries its time");
   assert.equal(tray.note!.url, `${cockpit}/access?item=iban`);
   assert.deepEqual(tray.groups, [
@@ -66,6 +66,7 @@ assert.equal(pose(), "pending", "Pending persists as long as the cockpit says so
   assert.equal(tray.details.url, `${cockpit}/access#requests`);
   assert.equal(tray.paused, false);
   assert.equal(tray.actions.desktop, "Show regula.dot on the desktop");
+  assert.equal(tray.actions.popups, "Show notes under the dot while regula.dot is hidden");
   assert.equal(tray.actions.settings.url, `${cockpit}/settings#regula-dot`);
   assert.equal(tray.actions.help.url, `${cockpit}/help#regula-dot`);
   assert.equal(traySummary(m, pose(), cockpit, false, { now, clickThrough: true }).status, "Connected · 1 item waiting · Clicks pass through");
@@ -116,7 +117,7 @@ m = reduce(m, { type: "pause", seconds: 3600 }, now);
 assert.equal(pose(), "paused");
 step("Mira asks the assistant");
 assert.equal(m.bubble, null, "no bubble while paused");
-step("CH-ID-01 protects the identifier");
+step("CH-ACC-01 masks the account number");
 assert.equal(m.bubble, null, "still no bubble while paused");
 assert.equal(m.lastNote!.key, "protected", "but the dropdown still learns what happened");
 assert.equal(traySummary(m, pose(), cockpit, false, { now }).status, "Paused, 60 min left · Nothing waiting");

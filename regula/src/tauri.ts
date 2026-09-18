@@ -6,7 +6,7 @@
 import type { TrayInfo } from "./tray";
 import { t } from "./strings";
 
-export type AppConfig = { mock: boolean; cockpit_url: string; lang: string; desktop: boolean };
+export type AppConfig = { mock: boolean; cockpit_url: string; lang: string; desktop: boolean; flipped: boolean };
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -22,6 +22,7 @@ export async function getConfig(): Promise<AppConfig> {
     cockpit_url: (cockpit || "https://cockpit.finnova.local").replace(/\/$/, ""),
     lang: q.get("lang") ?? "en",
     desktop: true, // the browser preview has no menu bar, so the companion is always shown
+    flipped: false,
   };
 }
 
@@ -71,6 +72,13 @@ export async function onTrayClickThrough(cb: (enabled: boolean) => void): Promis
   await listen<boolean>("regula:click-through", (e) => cb(e.payload));
 }
 
+/** The shell parks the disc on the other side of the window near the left screen edge; the view mirrors it. */
+export async function onFlip(cb: (flipped: boolean) => void): Promise<void> {
+  if (!isTauri) return;
+  const { listen } = await import("@tauri-apps/api/event");
+  await listen<boolean>("regula:flip", (e) => cb(e.payload));
+}
+
 /**
  * The menu-bar dot: solid pink, hollow while `count` items wait (the number sits
  * next to it), muted while offline or paused, grey when disabled. It never
@@ -101,8 +109,8 @@ export async function setTrayInfo(info: TrayInfo): Promise<void> {
  * popup under the menu-bar dot with the same wording as the bubble. When the
  * companion is visible the bubble already says it and the shell does nothing.
  */
-export async function showTrayPopup(text: string, deepLink: string | null): Promise<void> {
+export async function showTrayPopup(text: string, deepLink: string | null, openLabel = t("openBtn")): Promise<void> {
   if (!isTauri) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("show_popup", { text, deepLink, openLabel: t("openBtn") });
+  await invoke("show_popup", { text, deepLink, openLabel });
 }

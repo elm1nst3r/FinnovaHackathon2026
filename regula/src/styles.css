@@ -33,6 +33,23 @@ body {
 #pet:active {
   cursor: grabbing;
 }
+/* flip: parked near the left screen edge, the disc moves to the window's left and the bubble opens to the right */
+#stage.flip #pet {
+  right: auto;
+  left: 14px;
+}
+#stage.flip #bubble {
+  right: auto;
+  left: 112px;
+}
+#stage.flip #bubble::after {
+  right: auto;
+  left: -7px;
+  border-right: none;
+  border-top: none;
+  border-left: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
+}
 
 /* ---------------------------------------------------------------- rig base */
 .pet {
@@ -238,6 +255,13 @@ body {
   border-top: 1px solid var(--surface-border);
   transform: rotate(45deg);
 }
+#bubble.titled {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.bubble-body { display: flex; flex-direction: column; gap: 2px; }
+.bubble-title { font-weight: 600; }
 @keyframes bubble-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 /* Open: a real target (28 px tall), not a caption */
 .bubble-open {

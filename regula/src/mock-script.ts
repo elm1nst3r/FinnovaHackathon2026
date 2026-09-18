@@ -1,6 +1,6 @@
 /**
  * Scripted demo sequence matching the cockpit's story (PRD "Demo fallback"):
- * Mira asks, CH-ID-01 fires, she requests the IBAN, Jonas approves for 30 days,
+ * Mira asks, CH-ACC-01 masks the account number, she requests it, Jonas approves for 30 days,
  * the draft is signed off.
  *
  * Only labels, rule ids, approver names and deep links. No values.
@@ -19,7 +19,7 @@ export type MockStep = {
 export function mockSnapshot(cockpit: string): Snapshot {
   return {
     role: "advisor",
-    counters: { open: 2, protected: 1, waiting: 0, granted: 1 },
+    counters: { open: 3, protected: 5, waiting: 0, granted: 1 },
     pending: [],
     drafts: [],
     approverQueue: [],
@@ -39,18 +39,17 @@ export const mockScript: MockStep[] = [
   },
   {
     after: 4_000,
-    name: "CH-ID-01 protects the identifier",
+    name: "CH-ACC-01 masks the account number",
     events: ({ now, seq, cockpit }) => [
       { id: seq(), time: now.toISOString(), kind: "assistant.done" },
       {
         id: seq(),
         time: now.toISOString(),
         kind: "protection.fired",
-        ruleId: "CH-ID-01",
-        label: "identifier",
+        ruleId: "CH-ACC-01",
+        label: "account number",
         deepLink: `${cockpit}/assistant?conv=c-1042`,
       },
-      { id: seq(), time: now.toISOString(), kind: "counters.changed", counters: { open: 2, protected: 2, waiting: 0, granted: 1 } },
     ],
   },
   {
@@ -67,7 +66,7 @@ export const mockScript: MockStep[] = [
         approver: "Jonas Frei",
         deepLink: `${cockpit}/access?item=iban`,
       },
-      { id: seq(), time: now.toISOString(), kind: "counters.changed", counters: { open: 1, protected: 2, waiting: 1, granted: 1 } },
+      { id: seq(), time: now.toISOString(), kind: "counters.changed", counters: { open: 3, protected: 4, waiting: 1, granted: 1 } },
     ],
   },
   {
@@ -83,7 +82,7 @@ export const mockScript: MockStep[] = [
         until: inDays(now, 30),
         deepLink: `${cockpit}/access?item=iban`,
       },
-      { id: seq(), time: now.toISOString(), kind: "counters.changed", counters: { open: 1, protected: 2, waiting: 0, granted: 2 } },
+      { id: seq(), time: now.toISOString(), kind: "counters.changed", counters: { open: 3, protected: 4, waiting: 0, granted: 2 } },
     ],
   },
   {

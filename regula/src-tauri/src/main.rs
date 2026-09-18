@@ -6,8 +6,9 @@
 //! By default Regula is only a pink dot in the menu bar / tray, the full stop
 //! from the finnova logo, recoloured per cockpit state. The Rust side owns that
 //! dot, its dropdown (a short summary the web view reports, plus the actions
-//! and the one local setting: regula.dot on the desktop or not; every other
-//! setting is managed online in the cockpit, the dropdown only links there),
+//! and the two local settings: regula.dot on the desktop or not, and whether
+//! the popup under the dot shows while it is hidden; every other setting is
+//! managed online in the cockpit, the dropdown only links there),
 //! the popup that appears under the dot when something happens while the
 //! companion is hidden, and the transparent companion window itself, which
 //! stays hidden until the user opts in ("Show regula.dot on the desktop").
@@ -39,10 +40,13 @@ struct Config {
     lang: String,
     /// True when the user opted into the desktop companion.
     desktop: bool,
+    /// True when the disc sits at the window's left and the bubble opens to the right
+    /// (the companion was parked near the left edge of the screen).
+    flipped: bool,
 }
 
 impl Config {
-    fn from_env(desktop: bool) -> Self {
+    fn from_env(desktop: bool, flipped: bool) -> Self {
         let args: Vec<String> = std::env::args().collect();
         let mut cockpit_url = std::env::var("REGULA_COCKPIT_URL").unwrap_or_default();
         let mut mock = args.iter().any(|a| a == "--mock");
@@ -72,17 +76,34 @@ impl Config {
             cockpit_url: cockpit_url.trim_end_matches('/').to_string(),
             lang,
             desktop,
+            flipped,
         }
     }
 }
 
 // ---------------------------------------------------------------- settings
-/// The only thing Regula stores besides the window position: whether the user
-/// wants the companion on the desktop. Lives in the app config dir as JSON.
-#[derive(Clone, Default, Serialize, Deserialize)]
+/// What Regula stores besides the window position: whether the user wants the
+/// companion on the desktop, and whether the popup under the dot may show while
+/// the companion is hidden. Lives in the app config dir as JSON.
+#[derive(Clone, Serialize, Deserialize)]
 struct Settings {
     #[serde(default)]
     desktop: bool,
+    #[serde(default = "default_true")]
+    popups: bool,
+    /// Disc at the left of the window, bubble to its right (parked near the left screen edge).
+    #[serde(default)]
+    flipped: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings { desktop: false, popups: true, flipped: false }
+    }
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn settings_path(app: &AppHandle) -> Option<std::path::PathBuf> {
@@ -127,6 +148,8 @@ struct TrayActions {
     resume: String,
     desktop: String,
     click_through: String,
+    #[serde(default)]
+    popups: String,
     settings: TrayLink,
     #[serde(default)]
     help: TrayLink,
@@ -142,6 +165,7 @@ impl Default for TrayActions {
             resume: "Resume reactions".into(),
             desktop: "Show regula.dot on the desktop".into(),
             click_through: "Let clicks pass through regula.dot".into(),
+            popups: "Show notes under the dot while regula.dot is hidden".into(),
             settings: TrayLink { text: "Manage settings in the cockpit…".into(), url: None },
             help: TrayLink { text: "What is regula.dot?".into(), url: None },
             quit: "Quit regula.dot".into(),
@@ -179,9 +203,12 @@ struct TrayInfo {
 struct Shell {
     desktop_item: Mutex<CheckMenuItem<tauri::Wry>>,
     click_item: Mutex<CheckMenuItem<tauri::Wry>>,
+    popup_item: Mutex<CheckMenuItem<tauri::Wry>>,
     /// Click-through is a session toggle, not a setting: it resets on restart.
     click_through: Mutex<bool>,
     settings: Mutex<Settings>,
+    /// Bumped on every window move; the on-screen check runs once the moves stop.
+    move_gen: Mutex<u64>,
     info: Mutex<TrayInfo>,
     /// Deep links behind the `link:<n>` menu ids, in menu order.
     links: Mutex<Vec<String>>,
@@ -338,7 +365,12 @@ fn show_popup(app: AppHandle, text: String, deep_link: Option<String>, open_labe
         .get_webview_window("main")
         .and_then(|w| w.is_visible().ok())
         .unwrap_or(false);
-    if companion_visible {
+    let popups_enabled = app
+        .try_state::<Shell>()
+        .map(|s| s.settings.lock().unwrap().popups)
+        .unwrap_or(true);
+    if companion_visible || !popups_enabled {
+        // The dropdown still keeps the last note, so nothing is lost.
         return Ok(());
     }
     let popup = app.get_webview_window("popup").ok_or("no popup window")?;
@@ -352,6 +384,60 @@ fn show_popup(app: AppHandle, text: String, deep_link: Option<String>, open_labe
     }
     app.emit_to("popup", "regula:popup", Payload { text, deep_link, open_label })
         .map_err(|e| e.to_string())
+}
+
+/// How far the window shifts when the disc changes side, so the disc itself stays
+/// put: the 120 px canvas moves from `right: 14px` to `left: 14px` in a 360 px window.
+const FLIP_SHIFT: f64 = 360.0 - 120.0 - 14.0 - 14.0;
+
+/// The companion never leaves the screen, and neither does its bubble. After a
+/// move settles: dragged past the left edge, the disc changes side so the bubble
+/// opens to the right; dragged back past the right edge, it changes back. What
+/// still hangs over any edge is clamped into the work area of the screen it is on.
+fn keep_on_screen(app: &AppHandle) {
+    let Some(win) = app.get_webview_window("main") else { return };
+    let Some(shell) = app.try_state::<Shell>() else { return };
+    let (Ok(pos), Ok(size)) = (win.outer_position(), win.outer_size()) else { return };
+    let centre = (pos.x as f64 + size.width as f64 / 2.0, pos.y as f64 + size.height as f64 / 2.0);
+    let monitor = win
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| app.monitor_from_point(centre.0, centre.1).ok().flatten())
+        .or_else(|| app.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else { return };
+    let scale = monitor.scale_factor();
+    let area_pos = monitor.work_area().position.to_logical::<f64>(scale);
+    let area_size = monitor.work_area().size.to_logical::<f64>(scale);
+    let p = pos.to_logical::<f64>(scale);
+    let s = size.to_logical::<f64>(scale);
+    let (left, right) = (area_pos.x, area_pos.x + area_size.width);
+    let (top, bottom) = (area_pos.y, area_pos.y + area_size.height);
+
+    let was_flipped = shell.settings.lock().unwrap().flipped;
+    let mut flipped = was_flipped;
+    let mut x = p.x;
+    if !flipped && x < left {
+        flipped = true;
+        x += FLIP_SHIFT;
+    } else if flipped && x + s.width > right {
+        flipped = false;
+        x -= FLIP_SHIFT;
+    }
+    x = x.clamp(left, (right - s.width).max(left));
+    let y = p.y.clamp(top, (bottom - s.height).max(top));
+
+    if flipped != was_flipped {
+        {
+            let mut settings = shell.settings.lock().unwrap();
+            settings.flipped = flipped;
+            save_settings(app, &settings);
+        }
+        let _ = app.emit("regula:flip", flipped);
+    }
+    if (x - p.x).abs() > 0.5 || (y - p.y).abs() > 0.5 {
+        let _ = win.set_position(LogicalPosition::new(x, y));
+    }
 }
 
 /// Centre the popup under the menu-bar dot, kept inside the screen it is on.
@@ -400,6 +486,21 @@ fn apply_desktop(app: &AppHandle, enabled: bool) {
     let _ = app.emit("regula:desktop", enabled);
 }
 
+/// The popup under the dot, on or off. Persisted, mirrored in the tray menu.
+fn apply_popups(app: &AppHandle, enabled: bool) {
+    if !enabled {
+        if let Some(popup) = app.get_webview_window("popup") {
+            let _ = popup.hide();
+        }
+    }
+    if let Some(shell) = app.try_state::<Shell>() {
+        let mut s = shell.settings.lock().unwrap();
+        s.popups = enabled;
+        save_settings(app, &s);
+    }
+    let _ = refresh_menu(app);
+}
+
 /// Click-through from the dropdown: applied to the companion window here and
 /// mirrored to the web view, which only updates its cursor styling.
 fn apply_click_through(app: &AppHandle, enabled: bool) {
@@ -418,6 +519,7 @@ struct BuiltMenu {
     menu: Menu<tauri::Wry>,
     desktop_item: CheckMenuItem<tauri::Wry>,
     click_item: CheckMenuItem<tauri::Wry>,
+    popup_item: CheckMenuItem<tauri::Wry>,
     links: Vec<String>,
 }
 
@@ -426,7 +528,8 @@ struct BuiltMenu {
 /// headers), the cockpit links, the pause entries (or one Resume), the
 /// settings (the desktop check item, the click-through check item, the link to
 /// the rest in the cockpit, and what regula.dot is), quit.
-fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bool) -> tauri::Result<BuiltMenu> {
+fn build_menu(app: &AppHandle, info: &TrayInfo, settings: &Settings, click_through: bool) -> tauri::Result<BuiltMenu> {
+    let desktop = settings.desktop;
     let menu = Menu::new(app)?;
     let mut links: Vec<String> = Vec::new();
     let mut link_item = |text: &str, url: &Option<String>| -> tauri::Result<MenuItem<tauri::Wry>> {
@@ -480,12 +583,14 @@ fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bo
         }
     }
 
-    // Settings: the desktop companion is the only one kept locally.
+    // Settings kept locally: the desktop companion, click-through, the popup under the dot.
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     let desktop_item = CheckMenuItem::with_id(app, "desktop", &a.desktop, true, desktop, None::<&str>)?;
     menu.append(&desktop_item)?;
     let click_item = CheckMenuItem::with_id(app, "clickthrough", &a.click_through, desktop, click_through, None::<&str>)?;
     menu.append(&click_item)?;
+    let popup_item = CheckMenuItem::with_id(app, "popups", &a.popups, true, settings.popups, None::<&str>)?;
+    menu.append(&popup_item)?;
     menu.append(&link_item(&a.settings.text, &a.settings.url)?)?;
     if !a.help.text.is_empty() {
         menu.append(&link_item(&a.help.text, &a.help.url)?)?;
@@ -494,7 +599,7 @@ fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bo
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     menu.append(&MenuItem::with_id(app, "quit", &a.quit, true, None::<&str>)?)?;
 
-    Ok(BuiltMenu { menu, desktop_item, click_item, links })
+    Ok(BuiltMenu { menu, desktop_item, click_item, popup_item, links })
 }
 
 /// Rebuild the dropdown from the current summary and settings and hand it to the tray.
@@ -502,15 +607,16 @@ fn refresh_menu(app: &AppHandle) -> tauri::Result<()> {
     let shell = app.state::<Shell>();
     let built = {
         let info = shell.info.lock().unwrap();
-        let desktop = shell.settings.lock().unwrap().desktop;
+        let settings = shell.settings.lock().unwrap().clone();
         let click_through = *shell.click_through.lock().unwrap();
-        build_menu(app, &info, desktop, click_through)?
+        build_menu(app, &info, &settings, click_through)?
     };
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         tray.set_menu(Some(built.menu))?;
     }
     *shell.desktop_item.lock().unwrap() = built.desktop_item;
     *shell.click_item.lock().unwrap() = built.click_item;
+    *shell.popup_item.lock().unwrap() = built.popup_item;
     *shell.links.lock().unwrap() = built.links;
     Ok(())
 }
@@ -520,14 +626,16 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
         status: "starting".to_string(),
         ..TrayInfo::default()
     };
-    let built = build_menu(app, &info, settings.desktop, false)?;
+    let built = build_menu(app, &info, &settings, false)?;
     let menu = built.menu;
 
     app.manage(Shell {
         desktop_item: Mutex::new(built.desktop_item),
         click_item: Mutex::new(built.click_item),
+        popup_item: Mutex::new(built.popup_item),
         click_through: Mutex::new(false),
         settings: Mutex::new(settings),
+        move_gen: Mutex::new(0),
         info: Mutex::new(info),
         links: Mutex::new(built.links),
     });
@@ -581,6 +689,13 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
                         .unwrap_or(false);
                     apply_click_through(app, enabled);
                 }
+                "popups" => {
+                    let enabled = app
+                        .try_state::<Shell>()
+                        .and_then(|s| s.popup_item.lock().unwrap().is_checked().ok())
+                        .unwrap_or(true);
+                    apply_popups(app, enabled);
+                }
                 "quit" => app.exit(0),
                 _ => {}
             }
@@ -610,9 +725,29 @@ fn main() {
             set_tray_info,
             show_popup
         ])
+        .on_window_event(|window, event| {
+            // A move (drag, restore, monitor change) is checked once it settles.
+            if window.label() != "main" || !matches!(event, tauri::WindowEvent::Moved(_)) {
+                return;
+            }
+            let app = window.app_handle().clone();
+            let Some(shell) = app.try_state::<Shell>() else { return };
+            let generation = {
+                let mut g = shell.move_gen.lock().unwrap();
+                *g += 1;
+                *g
+            };
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(250));
+                let settled = app.try_state::<Shell>().map(|s| *s.move_gen.lock().unwrap() == generation).unwrap_or(false);
+                if settled {
+                    keep_on_screen(&app);
+                }
+            });
+        })
         .setup(|app| {
             let settings = load_settings(app.handle());
-            app.manage(Config::from_env(settings.desktop));
+            app.manage(Config::from_env(settings.desktop, settings.flipped));
             build_tray(app.handle(), settings.clone())?;
             if settings.desktop {
                 if let Some(win) = app.get_webview_window("main") {

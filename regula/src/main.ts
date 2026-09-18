@@ -7,11 +7,12 @@ import { createRig, DISC_CENTER_Y } from "./rig";
 import { MockFeed, SseFeed, type Feed } from "./feed";
 import { badgeRuleId, derivePose, initialModel, reduce, trayCount, type Model } from "./state";
 import { renderBubble } from "./bubble";
-import { setLang, t } from "./strings";
+import { bubbleOpenLabel, bubbleTitle, setLang, t } from "./strings";
 import { traySummary } from "./tray";
 import {
   getConfig,
   isTauri,
+  onFlip,
   onTrayClickThrough,
   onTrayOpened,
   onTrayPause,
@@ -57,6 +58,10 @@ async function boot() {
 
   const rig = createRig();
   petEl.appendChild(rig.el);
+
+  // Near the left edge of the screen the disc sits at the left and the bubble opens to the right.
+  stage.classList.toggle("flip", config.flipped);
+  void onFlip((flipped) => stage.classList.toggle("flip", flipped));
 
   let model: Model = initialModel();
   let pose: Pose = "offline";
@@ -146,7 +151,9 @@ async function boot() {
     const key = b.key + b.until;
     if (key === popupKey) return;
     popupKey = key;
-    void showTrayPopup(t(b.key, b.params), b.deepLink ?? null);
+    const title = bubbleTitle(b.key);
+    const text = t(b.key, b.params);
+    void showTrayPopup(title ? `${title}: ${text}` : text, b.deepLink ?? null, bubbleOpenLabel(b.key));
   };
 
   const render = () => {

@@ -24,6 +24,8 @@ export type TrayActions = {
   desktop: string;
   /** Check item: the cursor falls through the companion. */
   clickThrough: string;
+  /** Check item: the popup under the menu-bar dot while the companion is hidden. */
+  popups: string;
   /** Everything else is managed online in the cockpit. */
   settings: TrayLink;
   help: TrayLink;
@@ -132,6 +134,7 @@ export function traySummary(m: Model, pose: Pose, cockpit: string, mock: boolean
       resume: t("trayResume"),
       desktop: t("trayDesktop"),
       clickThrough: t("trayClickThrough"),
+      popups: t("trayPopups"),
       settings: { text: t("traySettings"), url: `${cockpit}/settings#regula-dot` },
       help: { text: t("trayHelp"), url: `${cockpit}/help#regula-dot` },
       quit: t("trayQuit"),
