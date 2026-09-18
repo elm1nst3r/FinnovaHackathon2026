@@ -1,27 +1,43 @@
-# Regula AI Gateway — Governance as Infrastructure
+# Regula — Governed AI on Every Surface
 
-> **The same three outcomes — ALLOW, MAKE SAFE, BLOCK — but for every app, agent and API, not just the browser.**
+> **Use AI where you want. Governance follows you.** The same three outcomes —
+> ALLOW, MAKE SAFE, BLOCK — applied to every browser, IDE, desktop app, agent and API.
 
-**Status:** Hackathon concept extension · complements [Finnova AI Guard](finnova-ai-guard-prd.md)
-**Product type:** AI Gateway / enforcement point for the Regula governance layer
+**Status:** Hackathon concept · supersedes the "browser-extension only" framing of [Finnova AI Guard](finnova-ai-guard-prd.md)
+**Product type:** AI governance suite — an on-device companion, a control cockpit and an enforcing gateway
 **High-level architecture:** [`../pitch/regula-ai-gateway.html`](../pitch/regula-ai-gateway.html) (interactive, presentation-ready)
 **Device enforcement:** [`../pitch/regula-ai-gateway-enforcement.html`](../pitch/regula-ai-gateway-enforcement.html) (how the gateway gets in the middle)
 
 ---
 
-## 1. What it is, in one sentence
+## 1. What Regula is — three components
 
-> **The Regula AI Gateway is a single reverse-proxy in front of every AI model that
+Regula is **no longer a browser extension**. It is a governance suite made of three
+parts that share one policy catalogue (`CH-AI-*`) and one vocabulary:
+
+| Component | What it is | What it does |
+|---|---|---|
+| **Regula Dot** | The on-device companion (evolves the old AI Guard extension into a system-wide helper) | Follows the user across tools; provides guidance, collects inputs (e.g. the data classification), and explains every decision in context |
+| **Regula Cockpit** | The central control plane | **Defines the policies** that the Gateway enforces, and is where each user reviews **their rights, approved tools and their own history**; ARB / GRC governance views live here too |
+| **Regula Gateway** | The AI Gateway (enforcement point) | Routes every AI call through the policy engine and returns **ALLOW · MAKE SAFE · BLOCK** before anything reaches a provider |
+
+> **Cockpit defines. Gateway enforces. Dot guides.**
+
+Policy is authored **once** in the Cockpit, enforced on **every** call by the Gateway,
+and surfaced to the employee **in place** by Dot. The rest of this document details the
+Gateway, because it is the piece that makes the guarantee technical.
+
+## 2. The Gateway, in one sentence
+
+> **The Regula Gateway is a single reverse-proxy in front of every AI model that
 > routes all AI traffic through Finnova's policy engine — allowing, sanitising or
 > blocking each call — so governance is enforced by infrastructure, not by people.**
 
-AI Guard proves the idea at the **point of use** (a browser extension). The Regula
-AI Gateway proves the same idea at the **point of exit** (the network). Together they
-are the two enforcement points named in AI Guard PRD §16: *"Browser-based AI →
-extension"* and *"AI APIs → central AI/API gateway."* Same rules, same decisions,
-same audit — a different chokepoint.
+Regula Dot proves the idea at the **point of use** (on the device, next to the user).
+The Regula Gateway proves the same idea at the **point of exit** (the network). Same
+rules, same decisions, same audit — a second, unavoidable chokepoint.
 
-## 2. Why a gateway, and why now
+## 3. Why a gateway, and why now
 
 The market has converged on a pattern: as soon as a company uses more than one model,
 teams put a **gateway** between their applications and the providers (Vercel AI
@@ -35,7 +51,7 @@ cheaper token routing; it needs **every AI call to be provably compliant before 
 leaves the bank**. So we take the standard LLM-gateway shape and make *policy the
 first-class citizen*:
 
-| Standard LLM gateway | Regula AI Gateway (Finnova) |
+| Standard LLM gateway | Regula Gateway (Finnova) |
 |---|---|
 | Unified API across providers | ✅ Same — one OpenAI-compatible endpoint |
 | Routing, fallback, caching, cost control | ✅ Same — operational hygiene |
@@ -43,7 +59,7 @@ first-class citizen*:
 | Observability of tokens & latency | ⭐ **Governance audit** — metadata-only, ARB/GRC-facing, Swiss-labour-law safe |
 | "Which model is cheapest?" | ⭐ **"Is this call allowed at all, and for this data class?"** |
 
-## 3. How a request flows
+## 4. How a request flows
 
 Follow one call through the gateway (mirrors the diagram left → right):
 
@@ -54,8 +70,8 @@ Follow one call through the gateway (mirrors the diagram left → right):
 2. **Identity & tool context.** The request is authenticated (SSO / service identity)
    and the target AI service + data classification are resolved from the request and
    the **tool registry** (`allowed_data`, hosting region, training terms, RBAC).
-3. **Policy engine — the decision.** The exact same engine as AI Guard evaluates the
-   shared `CH-AI-*` rule pack and returns the most-restrictive outcome:
+3. **Policy engine — the decision.** The same engine Regula Dot uses on the device
+   evaluates the shared `CH-AI-*` rule pack and returns the most-restrictive outcome:
    - **ALLOW** — complies; forwarded untouched (target < 200 ms overhead).
    - **MAKE SAFE** — PII / secrets / tokens are redacted or pseudonymised, then the
      sanitised prompt is forwarded; placeholders are re-identified in the response.
@@ -68,10 +84,10 @@ Follow one call through the gateway (mirrors the diagram left → right):
    key. Sovereign / on-prem models are just another route.
 5. **Evidence, not surveillance.** Every decision emits a **metadata-only** audit
    event (tool, data class, decision, policy ID + version — never prompt content).
-   ARB / GRC see aggregates in the Governance Cockpit; individual employees are not
-   monitored. Events are published to the same feed Regula mirrors.
+   ARB / GRC see aggregates in the **Regula Cockpit**; individual employees are not
+   monitored. The same events feed each user's own history view in the Cockpit.
 
-## 4. "Wherever the employee runs AI" — how the gateway gets in the middle
+## 5. "Wherever the employee runs AI" — how the gateway gets in the middle
 
 > **See [`../pitch/regula-ai-gateway-enforcement.html`](../pitch/regula-ai-gateway-enforcement.html).**
 
@@ -84,7 +100,7 @@ is achieved at the **network layer**, not per application:
    pushes configuration the user cannot remove.
 2. **All AI-bound traffic is forced to the gateway.** An **always-on VPN** or a
    **system-wide forward proxy (PAC file)** is pushed by MDM. Every outbound
-   connection to a known AI provider is transparently sent to the Regula AI Gateway —
+   connection to a known AI provider is transparently sent to the Regula Gateway —
    whether it originates from Cursor, VS Code Copilot, `chat.openai.com` in the
    browser, or the native Claude app. No plugin per tool is required.
 3. **TLS is inspected under an enterprise CA.** Because the managed device trusts a
@@ -95,32 +111,32 @@ is achieved at the **network layer**, not per application:
    for AI-provider destinations. A direct call from an app to `api.anthropic.com` is
    simply dropped. Off-VPN, off-network or a bypass attempt = **no route to any
    model**. There is no "quiet side door."
-5. **The browser keeps its second layer.** AI Guard still runs in the browser as an
-   in-page enforcement point (better UX, in-context explanations), while the gateway
-   guarantees coverage for everything else on the machine.
+5. **Regula Dot rides along.** On the same device, Dot supplies the classification and
+   inputs the user declares, and explains each ALLOW / MAKE SAFE / BLOCK in context —
+   so the Gateway guarantees coverage while Dot keeps the experience friendly.
 
-> **Rule of thumb:** *The browser extension makes governance pleasant; the device
-> gateway makes it unavoidable.*
+> **Rule of thumb:** *Regula Dot makes governance pleasant; the Gateway makes it
+> unavoidable.*
 
 The user's mental model is exactly right: **it behaves like a company VPN setting** —
 except instead of only routing traffic, that tunnel also enforces AI policy on the way
 out. For server-side workloads (agents, CI/CD, batch) the same gateway is reached by
 service identity instead of a device VPN, so the *"one governed path"* holds there too.
 
-## 5. What the gateway adds over the browser extension
+## 6. What the Gateway adds beyond the on-device Dot
 
-- **Coverage the browser can't reach.** Server-to-server calls, agent tool-use,
-  CI/CD, and batch pipelines never touch a browser — the gateway governs them.
+- **Coverage Dot can't reach alone.** Server-to-server calls, agent tool-use,
+  CI/CD, and batch pipelines never touch a user device — the gateway governs them.
 - **Cannot be switched off by the user.** It is a network control, not a client
   add-on. This closes the main circumvention gap listed in AI Guard §5 (Non-Goals).
-- **One catalogue, two enforcement points.** Rules (`CH-AI-*`), the tool registry and
-  the policy version are shared, so a rule change lands in the browser *and* on the
-  wire at the same time. No divergence between "what the policy says" and "what
-  actually happens."
+- **One catalogue, two enforcement points.** Dot (on device) and the Gateway (on the
+  wire) share the Cockpit's `CH-AI-*` rules, tool registry and policy version, so a
+  rule change lands in both at once. No divergence between "what the policy says" and
+  "what actually happens."
 - **Provider abstraction & resilience.** Swap or fail over models centrally; add a
   sovereign model without touching a single application.
 
-## 6. The one-line pitch (for the 90-second video)
+## 7. The one-line pitch (for the 90-second video)
 
 > **"We put a single gateway in front of every AI model. Nothing reaches a model
 > uninspected. Every call is allowed, made safe, or blocked — automatically, by the
@@ -133,9 +149,9 @@ service identity instead of a device VPN, so the *"one governed path"* holds the
 
 ### Suggested 3-beat visual walk-through (using the diagram's guided views)
 
-1. **"Every channel, one path"** — fan-in from Employees / Apps / Agents & Jobs into
-   the single endpoint. *No side doors.*
-2. **"The decision"** — the gateway pipeline lights up: inspect → ALLOW / MAKE SAFE /
-   BLOCK. *Same engine as AI Guard.*
-3. **"Providers & evidence"** — route with fallback to OpenAI / Anthropic / Gemini /
-   sovereign, and the metadata-only audit trail flowing to ARB · GRC · Regula.
+1. **"Regula in three parts"** — Dot on the device, the Gateway on the wire, the
+   Cockpit defining policy and holding rights & history. *One product, three jobs.*
+2. **"Every channel, one path"** — fan-in from the managed device, apps, agents and
+   APIs into the single governed endpoint. *No side doors.*
+3. **"The decision"** — the gateway pipeline lights up: inspect → ALLOW / MAKE SAFE /
+   BLOCK, with policy authored in the Cockpit and evidence flowing back to it.

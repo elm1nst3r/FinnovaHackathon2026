@@ -2,11 +2,17 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Regula AI Gateway — One Governed Path to Every Model",
+    "title": "Regula — Dot · Cockpit · Gateway: One Governed Path to Every Model",
     "quality_profile": "showcase",
     "animation": "trace",
-    "viewBox": [1360, 660],
+    "viewBox": [1360, 680],
     "views": [
+      {
+        "id": "three-parts",
+        "label": "Regula in three parts",
+        "focus": ["dot", "catalogue", "audit", "dashboard", "policy"],
+        "note": "Cockpit defines policy, Gateway enforces it, Dot guides the user."
+      },
       {
         "id": "one-path",
         "label": "Every channel, one path",
@@ -18,19 +24,14 @@
         "label": "The decision",
         "focus": ["ingress", "policy", "redact", "router"],
         "note": "Same engine, same three outcomes: ALLOW, MAKE SAFE, BLOCK."
-      },
-      {
-        "id": "providers-governance",
-        "label": "Providers & evidence",
-        "focus": ["router", "openai", "anthropic", "gemini", "audit", "dashboard"],
-        "note": "Route with fallback; every call leaves metadata-only evidence."
       }
     ]
   },
   "components": [
-    { "id": "emp", "type": "external", "label": "Managed Employee Device", "sublabel": "IDE · Browser · App", "tag": "MDM / VPN", "pos": [32, 120], "size": [156, 66] },
-    { "id": "apps", "type": "external", "label": "Apps & Copilots", "sublabel": "SDK · REST", "pos": [32, 250], "size": [156, 66] },
-    { "id": "api", "type": "external", "label": "AI Agents & Jobs", "sublabel": "MCP · batch", "pos": [32, 380], "size": [156, 66] },
+    { "id": "dot", "type": "frontend", "label": "Regula Dot", "sublabel": "on-device companion", "tag": "guidance", "pos": [32, 120], "size": [156, 58] },
+    { "id": "emp", "type": "external", "label": "Managed Device", "sublabel": "IDE · Browser · App", "pos": [32, 204], "size": [156, 58] },
+    { "id": "apps", "type": "external", "label": "Apps & Copilots", "sublabel": "SDK · REST", "pos": [32, 300], "size": [156, 58] },
+    { "id": "api", "type": "external", "label": "AI Agents & Jobs", "sublabel": "MCP · batch", "pos": [32, 384], "size": [156, 58] },
 
     { "id": "ingress", "type": "security", "label": "Unified AI Endpoint", "sublabel": "OpenAI-compatible · SSO", "tag": "identity", "pos": [250, 251], "size": [156, 64] },
     { "id": "policy", "type": "backend", "label": "Policy Engine", "sublabel": "ALLOW · MAKE SAFE · BLOCK", "tag": "CH-AI-*", "pos": [468, 251], "size": [166, 64] },
@@ -41,17 +42,19 @@
     { "id": "anthropic", "type": "external", "label": "Anthropic", "sublabel": "Claude", "brand": "anthropic", "pos": [1160, 255], "size": [150, 60] },
     { "id": "gemini", "type": "external", "label": "Google Gemini", "sublabel": "+ sovereign / internal", "brand": "google-gemini", "pos": [1160, 390], "size": [150, 60] },
 
-    { "id": "catalogue", "type": "database", "label": "Rule & Tool Registry", "sublabel": "CH-AI-* · allowed_data", "pos": [468, 470], "size": [166, 64] },
-    { "id": "audit", "type": "database", "label": "Audit Log", "sublabel": "metadata only", "pos": [696, 470], "size": [156, 64] },
-    { "id": "dashboard", "type": "frontend", "label": "Governance Cockpit", "sublabel": "ARB · GRC · Regula", "pos": [914, 470], "size": [172, 64] }
+    { "id": "catalogue", "type": "database", "label": "Policy & Rule Studio", "sublabel": "CH-AI-* · tool registry", "pos": [468, 486], "size": [166, 64] },
+    { "id": "audit", "type": "database", "label": "Audit & History", "sublabel": "metadata only", "pos": [696, 486], "size": [156, 64] },
+    { "id": "dashboard", "type": "frontend", "label": "Rights & Governance", "sublabel": "employee · ARB · GRC", "pos": [914, 486], "size": [172, 64] }
   ],
   "boundaries": [
-    { "kind": "security-group", "label": "Regula AI Gateway — one governed path", "wraps": ["ingress", "policy", "redact", "router"], "pad": 26 },
-    { "kind": "security-group", "label": "Governance & Control Plane", "wraps": ["catalogue", "audit", "dashboard"], "pad": 22 },
+    { "kind": "security-group", "label": "Managed employee device", "wraps": ["dot", "emp"], "pad": 16 },
+    { "kind": "security-group", "label": "Regula Gateway — one governed path", "wraps": ["ingress", "policy", "redact", "router"], "pad": 26 },
+    { "kind": "security-group", "label": "Regula Cockpit — define policy · rights · history", "wraps": ["catalogue", "audit", "dashboard"], "pad": 22 },
     { "kind": "region", "label": "AI Providers (CH / EU / sovereign)", "wraps": ["openai", "anthropic", "gemini"], "pad": 18 }
   ],
   "connections": [
-    { "from": "emp", "to": "ingress", "label": "device VPN / proxy", "variant": "emphasis" },
+    { "from": "dot", "to": "emp", "label": "guidance · inputs", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [110, 192] },
+    { "from": "emp", "to": "ingress", "label": "device VPN / proxy", "variant": "emphasis", "labelAt": [219, 198] },
     { "from": "apps", "to": "ingress" },
     { "from": "api", "to": "ingress" },
 
@@ -63,13 +66,13 @@
     { "from": "router", "to": "anthropic", "variant": "emphasis" },
     { "from": "router", "to": "gemini", "variant": "emphasis" },
 
-    { "from": "catalogue", "to": "policy", "label": "rules + registry", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [551, 395] },
-    { "from": "redact", "to": "audit", "label": "audit event", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [774, 400] },
+    { "from": "catalogue", "to": "policy", "label": "policy from Cockpit", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [551, 405] },
+    { "from": "redact", "to": "audit", "label": "audit event", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [774, 410] },
     { "from": "audit", "to": "dashboard", "label": "aggregates" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "One path for every AI call", "items": ["IDE, browser and desktop AI on a managed device are captured at the network", "Server apps, agents and batch jobs use the same endpoint", "No direct path to a provider — the gateway is the only egress"] },
+    { "dot": "cyan", "title": "Regula, in three parts", "items": ["Regula Dot — on-device companion: guidance, inputs and in-context explanations", "Regula Cockpit — define policy, review your rights and your history", "Regula Gateway — enforces every AI call (ALLOW · MAKE SAFE · BLOCK)"] },
     { "dot": "violet", "title": "Same three outcomes, everywhere", "items": ["ALLOW passes untouched in under 200 ms", "MAKE SAFE redacts PII, secrets and tokens, then forwards", "BLOCK stops the call and offers an approved alternative"] },
-    { "dot": "emerald", "title": "Governance as infrastructure", "items": ["Central routing, fallback, key vaulting and cost control", "Rules from the shared CH-AI-* catalogue and tool registry", "Metadata-only audit feeds ARB / GRC via Regula"] }
+    { "dot": "emerald", "title": "Cockpit defines, Gateway enforces, Dot guides", "items": ["Policy is authored once in the Cockpit and applied on every call", "IDE, browser, desktop, agents and APIs all take the one governed path", "Metadata-only audit feeds the Cockpit; employees are not monitored"] }
   ]
 }

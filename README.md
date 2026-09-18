@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/dot/regula-dot.gif" alt="Regula — the Finnova AI governance companion, waving through a few emotes" width="220" />
+
 # 🏦 Finnova Hackathon 2026
 
 ### 12 hours. One team. Responsible AI for Banking & Finance.
@@ -203,11 +205,14 @@ good policy set, flagging the age once the cache passes 24 hours.
 
 ### 📄 Concept
 
-**[Finnova AI Guard](docs/prd/finnova-ai-guard-prd.md)** — an AI governance
-enforcement layer. Employees keep using their preferred AI tools; every
-interaction is automatically **ALLOWED**, **MADE SAFE** or **BLOCKED** against
-Finnova policy before data leaves the browser. The **[Regula AI Gateway](docs/prd/regula-ai-gateway.md)**
-extends the same enforcement to IDEs, desktop apps, agents and APIs at the network layer.
+**[Finnova AI Guard](docs/prd/finnova-ai-guard-prd.md)** is our AI governance
+enforcement layer: every AI interaction is automatically **ALLOWED**, **MADE SAFE**
+or **BLOCKED** against Finnova policy. It has grown into **[Regula](docs/prd/regula-ai-gateway.md)**
+— a governance suite in three parts:
+
+- **Regula Dot** — the on-device companion that guides the user and collects inputs.
+- **Regula Cockpit** — where policy is defined and each user reviews their rights and history.
+- **Regula Gateway** — the AI gateway that enforces policy on every call, from browser to IDE to agent to API.
 
 > **Use AI where you want. Governance follows you.**
 
