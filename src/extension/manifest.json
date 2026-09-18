@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Finnova AI Guard",
+  "version": "0.1.0",
+  "description": "Governs what leaves the bank when employees use AI tools, and shows each employee their own record of it.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "http://127.0.0.1:8787/*",
+    "http://localhost:8787/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://copilot.microsoft.com/*",
+    "https://m365.cloud.microsoft/*",
+    "https://chat.deepseek.com/*",
+    "https://www.perplexity.ai/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "https://copilot.microsoft.com/*",
+        "https://m365.cloud.microsoft/*",
+        "https://chat.deepseek.com/*",
+        "https://www.perplexity.ai/*"
+      ],
+      "js": ["guard.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://127.0.0.1:8787/*", "http://localhost:8787/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AI Guard"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "finnova-ai-guard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Finnova AI Guard — enforcement layer and governance cockpit",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test 'test/**/*.test.ts'",
+    "build:web": "node scripts/build-web.ts",
+    "serve": "node src/service/server.ts",
+    "dev": "npm run build:web && npm run serve"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.2"
+  }
+}

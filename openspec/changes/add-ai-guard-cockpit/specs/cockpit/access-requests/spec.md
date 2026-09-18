@@ -83,6 +83,13 @@ approval SHALL NOT be a status change alone.
 Where the approved result would require suppressing a non-suppressible policy,
 the approval SHALL be refused with that reason.
 
+An approval SHALL NOT be a route around the tool approval process. Where the
+requested tool is absent from the registry, or present but not approved for
+Finnova use, the approval SHALL be refused and governance directed to assess and
+register the tool. Granting one person a personal exception to the rule that
+governs unapproved tools would make the cockpit a self-service bypass of the
+assessment it exists to enforce.
+
 **Priority:** MVP
 
 #### Scenario: Approval grants an exception
@@ -100,6 +107,12 @@ the approval SHALL be refused with that reason.
 
 - **WHEN** a request names a tool that is not in the registry
 - **THEN** governance is prompted to assess and register the tool before the request can be approved
+
+#### Scenario: Request for a registered but unapproved tool
+
+- **WHEN** a request names a tool that is in the registry with approval status "not approved"
+- **THEN** the approval is refused with the reason that the tool itself must be assessed
+- **AND** no exception suppressing the unapproved-tool policy is created
 
 ---
 

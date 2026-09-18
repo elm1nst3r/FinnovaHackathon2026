@@ -30,6 +30,10 @@ npm-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Build output: the cockpit bundle and the unpacked extension are both generated
+# by `npm run build:web`, so they are not committed.
+public/
+
 # Python
 __pycache__/
 *.py[cod]

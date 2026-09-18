@@ -63,6 +63,49 @@ git clone https://github.com/elm1nst3r/FinnovaHackathon2026.git
 cd FinnovaHackathon2026
 ```
 
+### Running the prototype
+
+Requires **Node 24+** — the code is TypeScript and Node runs it directly, so
+there is no build step for the service or the tests.
+
+```bash
+npm install
+npm run build:web     # bundles the cockpit into public/ and the extension into dist/extension/
+npm run serve         # policy service + cockpit on http://127.0.0.1:8787
+```
+
+Open <http://127.0.0.1:8787/>. Identity is mocked: use the **demo identity**
+picker in the header to switch persona.
+
+| Persona | Sees |
+|---|---|
+| **Anna Berger** | Employee view only |
+| **Luca Moretti** | Employee view only |
+| **Sara Keller** | Employee **and** governance view (`ai-governance` group) |
+
+Switching persona is not a privilege escalation trick — the server re-derives
+group membership on every request, so an employee calling a governance
+endpoint directly is still refused.
+
+### Loading the browser extension
+
+The enforcement point is a Chrome MV3 extension. It is what actually sees a
+prompt; the cockpit never does.
+
+1. `chrome://extensions` → enable **Developer mode**
+2. **Load unpacked** → select `dist/extension/`
+3. Open ChatGPT, Copilot or Gemini and type something with an IBAN or a name in it
+
+The extension talks to `http://127.0.0.1:8787`, so the service must be running
+the first time. After that it works from its own cache — stop the service and
+it keeps enforcing the last known good policy set, flagging the age once the
+cache passes 24 hours.
+
+```bash
+npm run typecheck     # tsc --noEmit
+npm test              # node --test
+```
+
 ---
 
 ## �️ Repo Structure
@@ -72,7 +115,14 @@ cd FinnovaHackathon2026
 ├── docs/
 │   ├── prd/            # Product requirement documents  → see docs/prd/README.md
 │   └── pitch/          # Slides, demo script, pitch video assets
-├── src/                # Prototype code
+├── openspec/           # Change specs driving the implementation
+├── src/
+│   ├── core/           # Decision engine, policy validation, exceptions — pure, no I/O
+│   ├── service/        # Policy service: identity, store, HTTP routes
+│   ├── cockpit/        # Two-view web cockpit (employee · governance)
+│   ├── extension/      # Chrome MV3 enforcement point
+│   └── fixtures/       # Seed data for the demo
+├── test/               # node --test suites
 ├── .github/            # PR template
 └── CONTRIBUTING.md     # Branching, commits, ground rules
 ```
