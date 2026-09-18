@@ -17,42 +17,13 @@ Part of **[Swiss {ai} Weeks 2026](https://ai-weeks.ch/)** — Switzerland's larg
 
 ---
 
-## 📍 The Event at a Glance
+## 📍 At a Glance
 
-|  |  |
-|---|---|
-| **What** | Finnova Hackathon — a 12-hour AI build sprint |
-| **When** | **Friday, 18 September 2026** |
-| **Where** | Finnova AG Bankware HQ, Lenzburg 🇨🇭 |
-| **Umbrella** | [Swiss {ai} Weeks 2026](https://ai-weeks.ch/) (1 Sep – 4 Oct 2026) |
-| **Tracks** | Banking & Finance challenges · Freestyle / Open Innovation |
+**Finnova Hackathon** — a 12-hour AI build sprint. **Fri 18 Sep 2026**, Finnova AG Bankware HQ, Lenzburg 🇨🇭. Part of [Swiss {ai} Weeks 2026](https://ai-weeks.ch/). Tracks: Banking & Finance · Freestyle. Tokens, rooms and the final agenda live on the official pages — treat those as the source of truth.
 
-> ⚠️ Times, room assignments and the final agenda are published on the official pages — always treat those as the source of truth.
+**Links:** [Event](https://ai-weeks.ch/events/finnova-hackathon) · [Challenges](https://swamp-shake-7d9.notion.site/Challenges-247ac535de758095b85dea6ede1adaaa) (pick one before Friday) · [Tools](https://swamp-shake-7d9.notion.site/Tools-26aac535de7580b689e6edc66e16a4a0) (check what's provided first) · [Synthesia](https://www.synthesia.io) (pitch video)
 
----
-
-## 🔗 Official Resources
-
-> These are the four links the team is working from. Bookmark all of them before Friday.
-
-### 🎪 [Event Page — AI Weeks](https://ai-weeks.ch/events/finnova-hackathon)
-The official Finnova Hackathon listing on the Swiss {ai} Weeks site. Agenda, venue, timing and registration.
-
-### 🎯 [Challenges — Notion](https://swamp-shake-7d9.notion.site/Challenges-247ac535de758095b85dea6ede1adaaa)
-The challenge catalogue from partner organisations. **Read this first** — pick a challenge before the day starts so we don't burn the first hour deciding.
-
-### 🧰 [Tools — Notion](https://swamp-shake-7d9.notion.site/Tools-26aac535de7580b689e6edc66e16a4a0)
-The toolbox available to participants: sponsored accounts, API access, credits and platforms. Check what's provided *before* paying for anything.
-
-### 🎬 [Synthesia](https://www.synthesia.io)
-AI video generation with avatars and voiceovers — turn a script into a presenter-led video in minutes. Strong candidate for the **final pitch video** or a polished demo walkthrough when we can't film a live one.
-
----
-
-### Rules of thumb
-- 🎯 **Demo > architecture.** Judges see the demo, not the repo.
-- ✂️ **Scope down, then scope down again.** 12 hours is less than it sounds.
-- 🤝 **Responsible AI is a judging lens, not a footnote** — be ready to speak to data, bias and human oversight.
+**Rules of thumb:** Demo > architecture · scope down twice · Responsible AI is a judging lens, not a footnote.
 
 ---
 
@@ -122,7 +93,7 @@ npm test              # node --test
 
 ---
 
-## �️ Repo Structure
+## 🗂️ Repo Structure
 
 ```text
 .
@@ -130,6 +101,7 @@ npm test              # node --test
 │   ├── prd/            # Product requirement documents  → see docs/prd/README.md
 │   └── pitch/          # Slides, demo script, pitch video assets
 ├── openspec/           # Change specs driving the implementation
+├── assets/dot/         # "Dot" mascot — SVGs + Lottie animations
 ├── src/
 │   ├── core/           # Decision engine, policy validation, exceptions — pure, no I/O
 │   ├── service/        # Policy service: identity, store, HTTP routes
@@ -146,19 +118,19 @@ npm test              # node --test
 **[Finnova AI Guard](docs/prd/finnova-ai-guard-prd.md)** — an AI governance
 enforcement layer. Employees keep using their preferred AI tools; every
 interaction is automatically **ALLOWED**, **MADE SAFE** or **BLOCKED** against
-Finnova policy before data leaves the browser.
+Finnova policy before data leaves the browser. The **[Regula AI Gateway](docs/prd/regula-ai-gateway.md)**
+extends the same enforcement to IDEs, desktop apps, agents and APIs at the network layer.
 
 > **Use AI where you want. Governance follows you.**
 
 ---
 
-## �👥 Team
+## 👥 Team
 
-| Name | Role | GitHub |
-|---|---|---|
-| _add yourself_ | _e.g. Backend_ | _@handle_ |
-| _add yourself_ | _e.g. Frontend_ | _@handle_ |
-| _add yourself_ | _e.g. Pitch / Design_ | _@handle_ |
+- **Mattias Pliska** — [@mattias-pliska](https://github.com/mattias-pliska)
+- **elm1nster** — [@elm1nst3r](https://github.com/elm1nst3r)
+- **thedevil-prog** — [@thedevil-prog](https://github.com/thedevil-prog)
+- **Elena** — [@kuprienko](https://github.com/kuprienko)
 
 ---
 

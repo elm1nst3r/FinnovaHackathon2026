@@ -1,0 +1,68 @@
+[
+  {
+    "name": "dot-angry",
+    "file": "dot-angry.json",
+    "layers": 9,
+    "bytes": 9345
+  },
+  {
+    "name": "dot-curious",
+    "file": "dot-curious.json",
+    "layers": 9,
+    "bytes": 8136
+  },
+  {
+    "name": "dot-excited",
+    "file": "dot-excited.json",
+    "layers": 10,
+    "bytes": 13163
+  },
+  {
+    "name": "dot-happy",
+    "file": "dot-happy.json",
+    "layers": 5,
+    "bytes": 4835
+  },
+  {
+    "name": "dot-neutral",
+    "file": "dot-neutral.json",
+    "layers": 8,
+    "bytes": 6024
+  },
+  {
+    "name": "dot-safety-warning",
+    "file": "dot-safety-warning.json",
+    "layers": 13,
+    "bytes": 9941
+  },
+  {
+    "name": "dot-shield",
+    "file": "dot-shield.json",
+    "layers": 10,
+    "bytes": 7568
+  },
+  {
+    "name": "dot-surprised",
+    "file": "dot-surprised.json",
+    "layers": 11,
+    "bytes": 13012
+  },
+  {
+    "name": "dot-thinking",
+    "file": "dot-thinking.json",
+    "layers": 11,
+    "bytes": 9564
+  },
+  {
+    "name": "dot-thumbs-up",
+    "file": "dot-thumbs-up.json",
+    "layers": 9,
+    "bytes": 9867
+  },
+  {
+    "name": "dot-wink",
+    "file": "dot-wink.json",
+    "layers": 7,
+    "bytes": 5144
+  }
+]

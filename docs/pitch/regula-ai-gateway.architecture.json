@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Regula AI Gateway — One Governed Path to Every Model",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [1360, 660],
+    "views": [
+      {
+        "id": "one-path",
+        "label": "Every channel, one path",
+        "focus": ["emp", "apps", "api", "ingress"],
+        "note": "Browser, apps, agents and APIs all reach a single governed endpoint."
+      },
+      {
+        "id": "the-decision",
+        "label": "The decision",
+        "focus": ["ingress", "policy", "redact", "router"],
+        "note": "Same engine, same three outcomes: ALLOW, MAKE SAFE, BLOCK."
+      },
+      {
+        "id": "providers-governance",
+        "label": "Providers & evidence",
+        "focus": ["router", "openai", "anthropic", "gemini", "audit", "dashboard"],
+        "note": "Route with fallback; every call leaves metadata-only evidence."
+      }
+    ]
+  },
+  "components": [
+    { "id": "emp", "type": "external", "label": "Managed Employee Device", "sublabel": "IDE · Browser · App", "tag": "MDM / VPN", "pos": [32, 120], "size": [156, 66] },
+    { "id": "apps", "type": "external", "label": "Apps & Copilots", "sublabel": "SDK · REST", "pos": [32, 250], "size": [156, 66] },
+    { "id": "api", "type": "external", "label": "AI Agents & Jobs", "sublabel": "MCP · batch", "pos": [32, 380], "size": [156, 66] },
+
+    { "id": "ingress", "type": "security", "label": "Unified AI Endpoint", "sublabel": "OpenAI-compatible · SSO", "tag": "identity", "pos": [250, 251], "size": [156, 64] },
+    { "id": "policy", "type": "backend", "label": "Policy Engine", "sublabel": "ALLOW · MAKE SAFE · BLOCK", "tag": "CH-AI-*", "pos": [468, 251], "size": [166, 64] },
+    { "id": "redact", "type": "backend", "label": "Redact & Sanitise", "sublabel": "PII · secrets · tokens", "pos": [696, 251], "size": [156, 64] },
+    { "id": "router", "type": "cloud", "label": "Model Router + Vault", "sublabel": "route · fallback · keys", "pos": [914, 251], "size": [166, 64] },
+
+    { "id": "openai", "type": "external", "label": "OpenAI", "sublabel": "ChatGPT Enterprise", "brand": "openai", "pos": [1160, 120], "size": [150, 60] },
+    { "id": "anthropic", "type": "external", "label": "Anthropic", "sublabel": "Claude", "brand": "anthropic", "pos": [1160, 255], "size": [150, 60] },
+    { "id": "gemini", "type": "external", "label": "Google Gemini", "sublabel": "+ sovereign / internal", "brand": "google-gemini", "pos": [1160, 390], "size": [150, 60] },
+
+    { "id": "catalogue", "type": "database", "label": "Rule & Tool Registry", "sublabel": "CH-AI-* · allowed_data", "pos": [468, 470], "size": [166, 64] },
+    { "id": "audit", "type": "database", "label": "Audit Log", "sublabel": "metadata only", "pos": [696, 470], "size": [156, 64] },
+    { "id": "dashboard", "type": "frontend", "label": "Governance Cockpit", "sublabel": "ARB · GRC · Regula", "pos": [914, 470], "size": [172, 64] }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "Regula AI Gateway — one governed path", "wraps": ["ingress", "policy", "redact", "router"], "pad": 26 },
+    { "kind": "security-group", "label": "Governance & Control Plane", "wraps": ["catalogue", "audit", "dashboard"], "pad": 22 },
+    { "kind": "region", "label": "AI Providers (CH / EU / sovereign)", "wraps": ["openai", "anthropic", "gemini"], "pad": 18 }
+  ],
+  "connections": [
+    { "from": "emp", "to": "ingress", "label": "device VPN / proxy", "variant": "emphasis" },
+    { "from": "apps", "to": "ingress" },
+    { "from": "api", "to": "ingress" },
+
+    { "from": "ingress", "to": "policy", "label": "inspect context", "variant": "emphasis", "labelAt": [437, 329] },
+    { "from": "policy", "to": "redact", "label": "MAKE SAFE", "variant": "security", "labelAt": [665, 329] },
+    { "from": "redact", "to": "router", "label": "sanitised prompt", "labelAt": [883, 329] },
+
+    { "from": "router", "to": "openai", "variant": "emphasis" },
+    { "from": "router", "to": "anthropic", "variant": "emphasis" },
+    { "from": "router", "to": "gemini", "variant": "emphasis" },
+
+    { "from": "catalogue", "to": "policy", "label": "rules + registry", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [551, 395] },
+    { "from": "redact", "to": "audit", "label": "audit event", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [774, 400] },
+    { "from": "audit", "to": "dashboard", "label": "aggregates" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "One path for every AI call", "items": ["IDE, browser and desktop AI on a managed device are captured at the network", "Server apps, agents and batch jobs use the same endpoint", "No direct path to a provider — the gateway is the only egress"] },
+    { "dot": "violet", "title": "Same three outcomes, everywhere", "items": ["ALLOW passes untouched in under 200 ms", "MAKE SAFE redacts PII, secrets and tokens, then forwards", "BLOCK stops the call and offers an approved alternative"] },
+    { "dot": "emerald", "title": "Governance as infrastructure", "items": ["Central routing, fallback, key vaulting and cost control", "Rules from the shared CH-AI-* catalogue and tool registry", "Metadata-only audit feeds ARB / GRC via Regula"] }
+  ]
+}

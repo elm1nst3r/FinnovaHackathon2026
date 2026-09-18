@@ -35,6 +35,7 @@ assets/dot/
 ├── gestures/     5 actions
 ├── states/       5 states
 ├── context/      4 desktop scenes
+├── lottie/       11 animated Lottie JSON  — see lottie/README.md
 └── preview.html  contact-sheet viewer
 ```
 
