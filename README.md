@@ -65,7 +65,30 @@ cd FinnovaHackathon2026
 
 ---
 
-## 👥 Team
+## �️ Repo Structure
+
+```text
+.
+├── docs/
+│   ├── prd/            # Product requirement documents  → see docs/prd/README.md
+│   └── pitch/          # Slides, demo script, pitch video assets
+├── src/                # Prototype code
+├── .github/            # PR template
+└── CONTRIBUTING.md     # Branching, commits, ground rules
+```
+
+### 📄 Concept
+
+**[Finnova AI Guard](docs/prd/finnova-ai-guard-prd.md)** — an AI governance
+enforcement layer. Employees keep using their preferred AI tools; every
+interaction is automatically **ALLOWED**, **MADE SAFE** or **BLOCKED** against
+Finnova policy before data leaves the browser.
+
+> **Use AI where you want. Governance follows you.**
+
+---
+
+## �👥 Team
 
 | Name | Role | GitHub |
 |---|---|---|
