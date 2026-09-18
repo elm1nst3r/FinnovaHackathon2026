@@ -5,10 +5,12 @@
 //!
 //! By default Regula is only a pink dot in the menu bar / tray, the full stop
 //! from the finnova logo, recoloured per cockpit state. The Rust side owns that
-//! dot, its dropdown (a short summary the web view reports, plus the actions),
+//! dot, its dropdown (a short summary the web view reports, plus the actions
+//! and the one local setting: regula.dot on the desktop or not; every other
+//! setting is managed online in the cockpit, the dropdown only links there),
 //! the popup that appears under the dot when something happens while the
 //! companion is hidden, and the transparent companion window itself, which
-//! stays hidden until the user opts in ("Show Regula on the desktop").
+//! stays hidden until the user opts in ("Show regula.dot on the desktop").
 //! Everything Regula knows (state machine, feed client, card, bubbles) lives in
 //! the web view, so this file stays deliberately small.
 
@@ -113,6 +115,34 @@ struct TrayLink {
     url: Option<String>,
 }
 
+/// Labels of the fixed actions, localised by the web view (see `src/strings.ts`).
+/// The English defaults only show until the web view reports.
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TrayActions {
+    open_cockpit: String,
+    pause: String,
+    resume: String,
+    desktop: String,
+    click_through: String,
+    settings: TrayLink,
+    quit: String,
+}
+
+impl Default for TrayActions {
+    fn default() -> Self {
+        TrayActions {
+            open_cockpit: "Open cockpit".into(),
+            pause: "Pause reactions for 1 h".into(),
+            resume: "Resume reactions".into(),
+            desktop: "Show regula.dot on the desktop".into(),
+            click_through: "Let clicks pass through regula.dot".into(),
+            settings: TrayLink { text: "Manage settings in the cockpit…".into(), url: None },
+            quit: "Quit regula.dot".into(),
+        }
+    }
+}
+
 /// The short summary the web view derives from its model (see `src/tray.ts`).
 /// The shell turns it into native menu items above the actions.
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -122,6 +152,10 @@ struct TrayInfo {
     note: Option<TrayLink>,
     items: Vec<TrayLink>,
     details: Option<TrayLink>,
+    #[serde(default)]
+    paused: bool,
+    #[serde(default)]
+    actions: TrayActions,
 }
 
 /// Shared state the commands and menu events need. The menu is rebuilt from
@@ -129,6 +163,9 @@ struct TrayInfo {
 /// link table are replaced along with it.
 struct Shell {
     desktop_item: Mutex<CheckMenuItem<tauri::Wry>>,
+    click_item: Mutex<CheckMenuItem<tauri::Wry>>,
+    /// Click-through is a session toggle, not a setting: it resets on restart.
+    click_through: Mutex<bool>,
     settings: Mutex<Settings>,
     info: Mutex<TrayInfo>,
     /// Deep links behind the `link:<n>` menu ids, in menu order.
@@ -366,22 +403,41 @@ fn apply_desktop(app: &AppHandle, enabled: bool) {
         }
     }
     if let Some(shell) = app.try_state::<Shell>() {
-        let _ = shell.desktop_item.lock().unwrap().set_checked(enabled);
         let mut s = shell.settings.lock().unwrap();
         s.desktop = enabled;
         save_settings(app, &s);
     }
+    // Rebuilt rather than re-checked: click-through only makes sense while the companion shows.
+    let _ = refresh_menu(app);
     let _ = app.emit("regula:desktop", enabled);
 }
 
-/// The dropdown: the summary from the web view on top (status and counters as
-/// plain lines, then the last note, the items waiting and the details link as
-/// clickable entries), a separator, then the actions.
-fn build_menu(
-    app: &AppHandle,
-    info: &TrayInfo,
-    desktop: bool,
-) -> tauri::Result<(Menu<tauri::Wry>, CheckMenuItem<tauri::Wry>, Vec<String>)> {
+/// Click-through from the dropdown: applied to the companion window here and
+/// mirrored to the web view, which only updates its cursor styling.
+fn apply_click_through(app: &AppHandle, enabled: bool) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.set_ignore_cursor_events(enabled);
+    }
+    if let Some(shell) = app.try_state::<Shell>() {
+        *shell.click_through.lock().unwrap() = enabled;
+    }
+    let _ = refresh_menu(app);
+    let _ = app.emit("regula:click-through", enabled);
+}
+
+/// Everything the dropdown builds beyond the menu itself.
+struct BuiltMenu {
+    menu: Menu<tauri::Wry>,
+    desktop_item: CheckMenuItem<tauri::Wry>,
+    click_item: CheckMenuItem<tauri::Wry>,
+    links: Vec<String>,
+}
+
+/// The dropdown, top to bottom: the summary from the web view (status and
+/// counters as plain lines, the last note, the items waiting), the cockpit
+/// links, one pause / resume entry, the settings (the desktop check item, the
+/// click-through check item, and the link to the rest in the cockpit), quit.
+fn build_menu(app: &AppHandle, info: &TrayInfo, desktop: bool, click_through: bool) -> tauri::Result<BuiltMenu> {
     let menu = Menu::new(app)?;
     let mut links: Vec<String> = Vec::new();
     let mut link_item = |text: &str, url: &Option<String>| -> tauri::Result<MenuItem<tauri::Wry>> {
@@ -394,7 +450,9 @@ fn build_menu(
         };
         Ok(item)
     };
+    let a = &info.actions;
 
+    // Summary
     if !info.status.is_empty() {
         menu.append(&MenuItem::new(app, &info.status, false, None::<&str>)?)?;
     }
@@ -410,45 +468,48 @@ fn build_menu(
             menu.append(&link_item(&item.text, &item.url)?)?;
         }
     }
+
+    // Cockpit
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(app, "open", &a.open_cockpit, true, None::<&str>)?)?;
     if let Some(details) = &info.details {
-        menu.append(&PredefinedMenuItem::separator(app)?)?;
         menu.append(&link_item(&details.text, &details.url)?)?;
     }
-    menu.append(&PredefinedMenuItem::separator(app)?)?;
 
-    let desktop_item = CheckMenuItem::with_id(
-        app,
-        "desktop",
-        "Show Regula on the desktop",
-        true,
-        desktop,
-        None::<&str>,
-    )?;
+    // Reactions: one entry that reads as the thing you can do right now.
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    let pause_label = if info.paused { &a.resume } else { &a.pause };
+    menu.append(&MenuItem::with_id(app, "pause", pause_label, true, None::<&str>)?)?;
+
+    // Settings: the desktop companion is the only one kept locally.
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    let desktop_item = CheckMenuItem::with_id(app, "desktop", &a.desktop, true, desktop, None::<&str>)?;
     menu.append(&desktop_item)?;
-    menu.append(&MenuItem::with_id(app, "open", "Open cockpit", true, None::<&str>)?)?;
-    menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, "pause", "Pause reactions for 1 h", true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "resume", "Resume reactions", true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "clickthrough", "Toggle click-through", true, None::<&str>)?)?;
-    menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, "quit", "Quit Regula", true, None::<&str>)?)?;
+    let click_item = CheckMenuItem::with_id(app, "clickthrough", &a.click_through, desktop, click_through, None::<&str>)?;
+    menu.append(&click_item)?;
+    menu.append(&link_item(&a.settings.text, &a.settings.url)?)?;
 
-    Ok((menu, desktop_item, links))
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(app, "quit", &a.quit, true, None::<&str>)?)?;
+
+    Ok(BuiltMenu { menu, desktop_item, click_item, links })
 }
 
 /// Rebuild the dropdown from the current summary and settings and hand it to the tray.
 fn refresh_menu(app: &AppHandle) -> tauri::Result<()> {
     let shell = app.state::<Shell>();
-    let (menu, desktop_item, links) = {
+    let built = {
         let info = shell.info.lock().unwrap();
         let desktop = shell.settings.lock().unwrap().desktop;
-        build_menu(app, &info, desktop)?
+        let click_through = *shell.click_through.lock().unwrap();
+        build_menu(app, &info, desktop, click_through)?
     };
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        tray.set_menu(Some(menu))?;
+        tray.set_menu(Some(built.menu))?;
     }
-    *shell.desktop_item.lock().unwrap() = desktop_item;
-    *shell.links.lock().unwrap() = links;
+    *shell.desktop_item.lock().unwrap() = built.desktop_item;
+    *shell.click_item.lock().unwrap() = built.click_item;
+    *shell.links.lock().unwrap() = built.links;
     Ok(())
 }
 
@@ -457,13 +518,16 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
         status: "Regula · starting".to_string(),
         ..TrayInfo::default()
     };
-    let (menu, desktop_item, links) = build_menu(app, &info, settings.desktop)?;
+    let built = build_menu(app, &info, settings.desktop, false)?;
+    let menu = built.menu;
 
     app.manage(Shell {
-        desktop_item: Mutex::new(desktop_item),
+        desktop_item: Mutex::new(built.desktop_item),
+        click_item: Mutex::new(built.click_item),
+        click_through: Mutex::new(false),
         settings: Mutex::new(settings),
         info: Mutex::new(info),
-        links: Mutex::new(links),
+        links: Mutex::new(built.links),
     });
 
     TrayIconBuilder::with_id(TRAY_ID)
@@ -497,13 +561,15 @@ fn build_tray(app: &AppHandle, settings: Settings) -> tauri::Result<()> {
                     let _ = app.opener().open_url(url, None::<&str>);
                 }
                 "pause" => {
-                    let _ = app.emit("regula:pause", 60 * 60);
-                }
-                "resume" => {
-                    let _ = app.emit("regula:pause", 0);
+                    let paused = app.state::<Shell>().info.lock().unwrap().paused;
+                    let _ = app.emit("regula:pause", if paused { 0 } else { 60 * 60 });
                 }
                 "clickthrough" => {
-                    let _ = app.emit("regula:toggle-click-through", ());
+                    let enabled = app
+                        .try_state::<Shell>()
+                        .and_then(|s| s.click_item.lock().unwrap().is_checked().ok())
+                        .unwrap_or(false);
+                    apply_click_through(app, enabled);
                 }
                 "quit" => app.exit(0),
                 _ => {}

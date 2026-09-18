@@ -1,14 +1,30 @@
 /**
  * What the menu-bar dropdown shows: a status line, the four counters, the last
- * thing Regula said, one entry per item waiting on the user, and the link to
- * the details in the cockpit. Pure: model in, strings out. The Rust shell
- * renders it as native menu items and opens the links; nothing here navigates.
+ * thing Regula said, one entry per item waiting on the user, the link to the
+ * details in the cockpit, and the labels of the fixed actions below (so every
+ * word, including the settings, is localised here). Pure: model in, strings
+ * out. The Rust shell renders it as native menu items and opens the links;
+ * nothing here navigates.
  */
 import { trayCount, type Model } from "./state";
 import type { Pose } from "./types";
 import { t } from "./strings";
 
 export type TrayLink = { text: string; url: string | null };
+
+/** Labels of the fixed actions under the summary; the shell owns their behaviour. */
+export type TrayActions = {
+  openCockpit: string;
+  pause: string;
+  resume: string;
+  /** Check item: the desktop companion on or off (the dot stays in the menu bar). */
+  desktop: string;
+  /** Check item: the cursor falls through the companion. */
+  clickThrough: string;
+  /** Everything else is managed online in the cockpit. */
+  settings: TrayLink;
+  quit: string;
+};
 
 export type TrayInfo = {
   status: string;
@@ -18,6 +34,9 @@ export type TrayInfo = {
   /** Items waiting on the user, each opening its cockpit deep link. */
   items: TrayLink[];
   details: TrayLink;
+  /** True while reactions are paused; the shell shows Resume instead of Pause. */
+  paused: boolean;
+  actions: TrayActions;
 };
 
 /** Menus grow tall quickly; the cockpit shows the rest. */
@@ -55,5 +74,15 @@ export function traySummary(m: Model, pose: Pose, cockpit: string, mock: boolean
     note,
     items: items.slice(0, MAX_ITEMS),
     details: { text: t("trayDetails"), url: `${cockpit}/access#requests` },
+    paused: pose === "paused",
+    actions: {
+      openCockpit: t("trayOpenCockpit"),
+      pause: t("trayPause"),
+      resume: t("trayResume"),
+      desktop: t("trayDesktop"),
+      clickThrough: t("trayClickThrough"),
+      settings: { text: t("traySettings"), url: `${cockpit}/settings#regula-dot` },
+      quit: t("trayQuit"),
+    },
   };
 }

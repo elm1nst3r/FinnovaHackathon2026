@@ -59,6 +59,9 @@ assert.equal(pose(), "pending", "Pending persists as long as the cockpit says so
   assert.deepEqual(tray.note, { text: "Jonas has your Account number (IBAN) request.", url: `${cockpit}/access?item=iban` });
   assert.deepEqual(tray.items, [{ text: "Account number (IBAN) · CH-ACC-01 · with Jonas Frei", url: `${cockpit}/access?item=iban` }]);
   assert.equal(tray.details.url, `${cockpit}/access#requests`);
+  assert.equal(tray.paused, false);
+  assert.equal(tray.actions.desktop, "Show regula.dot on the desktop");
+  assert.equal(tray.actions.settings.url, `${cockpit}/settings#regula-dot`);
 }
 
 step("Jonas approves for 30 days");
@@ -94,6 +97,7 @@ step("CH-ID-01 protects the identifier");
 assert.equal(m.bubble, null, "still no bubble while paused");
 assert.equal(m.lastNote!.key, "protected", "but the dropdown still learns what happened");
 assert.equal(traySummary(m, pose(), cockpit, false).status, "Paused · Nothing waiting for you");
+assert.equal(traySummary(m, pose(), cockpit, false).paused, true, "the dropdown offers Resume while paused");
 m = reduce(m, { type: "pause", seconds: 0 }, now);
 m = reduce(m, { type: "disconnected" }, now);
 assert.equal(pose(), "offline");

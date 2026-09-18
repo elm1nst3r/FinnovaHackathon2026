@@ -58,15 +58,15 @@ async function boot() {
   // ---------------------------------------------------------------- render
   const open = (url: string) => void openLink(url);
   const togglePause = () => dispatch({ type: "pause", seconds: model.pausedUntil > Date.now() ? 0 : PAUSE_SECONDS });
-  // The x on the disc: Regula stays as the dot in the menu bar, where "Desktop companion"
-  // brings it back. The browser preview has no menu bar, so there it just hides the pet.
+  // The x on the disc: Regula stays as the dot in the menu bar, where "Show regula.dot
+  // on the desktop" brings it back. The browser preview has no menu bar, so there it just hides the pet.
   const close = () => {
     dispatch({ type: "dismiss-bubble" });
     if (isTauri) void setDesktop(false);
     else petEl.hidden = true;
   };
-  const toggleClickThrough = () => {
-    clickThrough = !clickThrough;
+  const applyClickThrough = (enabled: boolean) => {
+    clickThrough = enabled;
     stage.classList.toggle("click-through", clickThrough);
     void setClickThrough(clickThrough);
     dirty = true;
@@ -84,7 +84,7 @@ async function boot() {
     void setTrayState(trayPose, count, phase);
   };
 
-  // The dropdown behind the dot: status, counters, last note, items waiting, details link.
+  // The dropdown behind the dot: status, counters, last note, items waiting, links and action labels.
   let trayInfoKey = "";
   const syncTrayInfo = () => {
     const info = traySummary(model, pose, config.cockpit_url, config.mock);
@@ -196,7 +196,7 @@ async function boot() {
 
   // ---------------------------------------------------------------- tray
   await onTrayPause((seconds) => dispatch({ type: "pause", seconds }));
-  await onTrayClickThrough(toggleClickThrough);
+  await onTrayClickThrough(applyClickThrough);
 
   feed.start();
   render();

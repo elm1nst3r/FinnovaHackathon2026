@@ -28,6 +28,8 @@ Rust toolchain is pinned in `regula/src-tauri/rust-toolchain.toml`; the global d
 - All user-facing words live in `regula/src/strings.ts` (EN and DE), max 12 words, no emoji.
 - Brand colors and fonts only via `regula/src/tokens.css`.
 - The menu-bar dot is drawn in Rust (`dot_icon` in `src-tauri/src/main.rs`) from the pose the web view reports via `set_tray_state`; the companion window starts hidden and follows the persisted `desktop` setting.
+- The dot's dropdown is rebuilt in Rust from the summary the web view derives in `regula/src/tray.ts` and sends via `set_tray_info` (status, counters, last note, items waiting, cockpit links, one pause/resume entry, then the settings: the desktop check item, click-through, and a link to the cockpit settings page; every other setting lives in the cockpit). Menu ids `link:<n>` map to deep links; all wording, including the action labels, comes from `strings.ts`.
+- `show_popup` is offered for every bubble except "working"; Rust shows the popup window (`popup.html`, `src/popup.ts`) under the tray icon only while the companion window is hidden. The popup shows and hides itself (6 s or click).
 - Poses are switched via `data-state` on the SVG root; motion rules: 300 ms ease-out transitions, no bounce over 4 px, no rotation over 8 degrees, reduced-motion drops loops.
 - Never commit credentials or real customer data. Do not commit unless asked.
 

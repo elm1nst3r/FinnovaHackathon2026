@@ -52,10 +52,11 @@ export async function onTrayPause(cb: (seconds: number) => void): Promise<void> 
   await listen<number>("regula:pause", (e) => cb(e.payload));
 }
 
-export async function onTrayClickThrough(cb: () => void): Promise<void> {
+/** The shell owns the click-through check item and applies it to the window; this only mirrors it. */
+export async function onTrayClickThrough(cb: (enabled: boolean) => void): Promise<void> {
   if (!isTauri) return;
   const { listen } = await import("@tauri-apps/api/event");
-  await listen("regula:toggle-click-through", () => cb());
+  await listen<boolean>("regula:click-through", (e) => cb(e.payload));
 }
 
 /** The menu-bar dot mirrors the pose; `count` is shown next to it, `phase` makes Working breathe. */

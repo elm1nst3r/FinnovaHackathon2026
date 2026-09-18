@@ -20,7 +20,7 @@ const en: Table = {
   paused: "Paused. Back in a bit.",
   // pet
   openBtn: "Open",
-  close: "Hide Regula (the dot stays in the menu bar)",
+  close: "Hide regula.dot (the dot stays in the menu bar)",
   status_connected: "Connected",
   status_offline: "Offline",
   status_paused: "Paused",
@@ -32,9 +32,17 @@ const en: Table = {
   trayOne: "1 item waiting for you",
   trayMany: "{n} items waiting for you",
   trayCounters: "{open} open · {protected} protected · {waiting} waiting · {granted} granted",
-  trayDetails: "Open details in the cockpit",
+  trayDetails: "Open requests in the cockpit",
   traySignoff: "needs sign-off",
   trayFrom: "from {from}",
+  // menu-bar dropdown: fixed actions
+  trayOpenCockpit: "Open cockpit",
+  trayPause: "Pause reactions for 1 h",
+  trayResume: "Resume reactions",
+  trayDesktop: "Show regula.dot on the desktop",
+  trayClickThrough: "Let clicks pass through regula.dot",
+  traySettings: "Manage settings in the cockpit…",
+  trayQuit: "Quit regula.dot",
 };
 
 const de: Table = {
@@ -49,7 +57,7 @@ const de: Table = {
   approverNew: "{from} hat eine Anfrage gesendet: {label}.",
   paused: "Pausiert. Bin gleich zurück.",
   openBtn: "Öffnen",
-  close: "Regula ausblenden (der Punkt bleibt in der Menüleiste)",
+  close: "regula.dot ausblenden (der Punkt bleibt in der Menüleiste)",
   status_connected: "Verbunden",
   status_offline: "Offline",
   status_paused: "Pausiert",
@@ -60,9 +68,16 @@ const de: Table = {
   trayOne: "1 Eintrag wartet auf dich",
   trayMany: "{n} Einträge warten auf dich",
   trayCounters: "{open} offen · {protected} geschützt · {waiting} wartend · {granted} freigegeben",
-  trayDetails: "Details im Cockpit öffnen",
+  trayDetails: "Anfragen im Cockpit öffnen",
   traySignoff: "braucht Review",
   trayFrom: "von {from}",
+  trayOpenCockpit: "Cockpit öffnen",
+  trayPause: "Reaktionen 1 h pausieren",
+  trayResume: "Reaktionen fortsetzen",
+  trayDesktop: "regula.dot auf dem Desktop zeigen",
+  trayClickThrough: "Klicks durch regula.dot durchlassen",
+  traySettings: "Einstellungen im Cockpit verwalten…",
+  trayQuit: "regula.dot beenden",
 };
 
 const tables: Record<Lang, Table> = { en, de };
