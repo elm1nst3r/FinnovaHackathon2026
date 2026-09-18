@@ -32,6 +32,48 @@ optional, and an exception SHALL NOT be grantable without an expiry.
 
 ---
 
+### Requirement: An Exception Licenses Data, Not Tools
+
+An exception SHALL NOT name a tool that is absent from the registry, nor a tool
+that is present but not approved for Finnova use. The refusal SHALL happen in
+exception validation itself, so that it holds on every route that creates an
+exception — the direct grant and the approval of an access request alike.
+
+An exception is a decision about which data may go to a tool the bank has
+already assessed. Letting it also stand in for the assessment would make tool
+approval optional for anyone willing to ask, and would turn the request queue
+into a self-service route around it, one person at a time. The answer to
+"I need this tool" is to assess the tool.
+
+**Priority:** MVP
+
+#### Scenario: Exception for an unapproved tool
+
+- **WHEN** an exception naming a registered but unapproved tool is submitted, by either route
+- **THEN** it is rejected, the attempt is recorded, and governance is directed to assess the tool
+
+#### Scenario: Exception for an unregistered tool
+
+- **WHEN** an exception naming a tool absent from the registry is submitted
+- **THEN** it is rejected and nothing is written
+
+---
+
+### Requirement: Expiry Is Resolved to the End of the Chosen Day
+
+Where an expiry is chosen as a calendar day, it SHALL be stored as the end of
+that day in the local timezone. "Until 2 November" has to remain true for the
+whole of 2 November for the people the exception applies to.
+
+**Priority:** MVP
+
+#### Scenario: Expiry shown consistently
+
+- **WHEN** an exception granted until a given day is displayed in the permissions matrix and in the exception list
+- **THEN** both show the same calendar day
+
+---
+
 ### Requirement: Non-Suppressible Policies
 
 The credential policy and the strictly-confidential policy SHALL NOT be nameable

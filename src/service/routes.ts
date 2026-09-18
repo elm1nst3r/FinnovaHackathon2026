@@ -519,20 +519,10 @@ const decideRequest: Route = {
       ]);
     }
 
-    // An exception is a licence to send particular data to a tool the bank has
-    // already assessed. It is not a licence to use a tool nobody has approved:
-    // that would make the request queue a self-service route around the ARB, one
-    // person at a time. The answer to this case is to assess the tool.
-    const requestedTool = store.activeRegistry().tools.find((tool) => tool.id === request.toolId);
-    if (requestedTool?.approvalStatus === 'NOT_APPROVED') {
-      return badRequest([
-        {
-          code: 'TOOL_NOT_APPROVED',
-          field: 'toolId',
-          message: `"${requestedTool.name}" is registered but not approved for Finnova use. Assess the tool and change its status; a personal exception cannot stand in for that.`,
-        },
-      ]);
-    }
+    // A tool that is registered but not approved is refused one level down, in
+    // exception validation, so that the direct-grant route cannot be used to
+    // reach the same result. Approving here simply fails, and the refusal is
+    // recorded as an attempted widening.
 
     const expiresAt = text(raw['expiresAt']);
     const suppressedPolicyIds = Array.isArray(raw['suppressedPolicyIds'])

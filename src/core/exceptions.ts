@@ -32,10 +32,16 @@ export interface ExceptionDraft {
   sourceRequestId?: string | null;
 }
 
+export interface ExceptionToolRef {
+  id: string;
+  name: string;
+  approved: boolean;
+}
+
 export interface ExceptionValidationContext {
   now: Date;
   knownPolicyIds: readonly string[];
-  knownToolIds: readonly string[];
+  tools: readonly ExceptionToolRef[];
   knownUserIds: readonly string[];
   knownGroupIds: readonly string[];
 }
@@ -78,13 +84,24 @@ export function validateExceptionDraft(
   }
 
   const toolId = draft.scope?.toolId;
+  const tool =
+    typeof toolId === 'string' ? context.tools.find((entry) => entry.id === toolId.trim()) : undefined;
   if (typeof toolId !== 'string' || toolId.trim() === '') {
     errors.push({ code: 'SCOPE_REQUIRED', field: 'scope.toolId', message: 'A tool is required.' });
-  } else if (!context.knownToolIds.includes(toolId)) {
+  } else if (tool === undefined) {
     errors.push({
       code: 'UNKNOWN_TOOL',
       field: 'scope.toolId',
       message: `Tool "${toolId}" is not in the registry. Assess and register it first.`,
+    });
+  } else if (!tool.approved) {
+    // An exception licenses data, not tools. Allowing one here would make the
+    // tool approval process optional for anyone willing to ask nicely, which
+    // is the same bypass the request queue is not allowed to be.
+    errors.push({
+      code: 'TOOL_NOT_APPROVED',
+      field: 'scope.toolId',
+      message: `"${tool.name}" is registered but not approved for Finnova use. Assess the tool and change its status; an exception cannot stand in for that.`,
     });
   }
 

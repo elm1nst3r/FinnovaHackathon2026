@@ -93,10 +93,23 @@ test('the diff names what changes before it is published', () => {
 const validationContext = {
   now: NOW,
   knownPolicyIds: SEED_POLICIES.map((policy) => policy.id),
-  knownToolIds: ['chatgpt', 'm365-copilot', 'gemini'],
+  tools: [
+    { id: 'chatgpt', name: 'ChatGPT Enterprise', approved: true },
+    { id: 'm365-copilot', name: 'Microsoft 365 Copilot', approved: true },
+    { id: 'gemini', name: 'Google Gemini (consumer)', approved: false },
+  ],
   knownUserIds: ['u-anna', 'u-luca', 'u-sara'],
   knownGroupIds: ['finnova-all', 'operations'],
 };
+
+test('an exception cannot licence a tool nobody approved', () => {
+  const result = validateExceptionDraft(
+    draft({ scope: { toolId: 'gemini', classifications: ['INTERNAL'] } }),
+    validationContext,
+  );
+  assert.equal(result.ok, false);
+  assert.ok(errorCodes(result).includes('TOOL_NOT_APPROVED'));
+});
 
 function draft(overrides: Record<string, unknown> = {}) {
   return {

@@ -271,7 +271,11 @@ export class GovernanceStore {
     const validated = validateExceptionDraft(draft, {
       now,
       knownPolicyIds: this.activePolicySet().policies.map((policy) => policy.id),
-      knownToolIds: this.activeRegistry().tools.map((tool) => tool.id),
+      tools: this.activeRegistry().tools.map((tool) => ({
+        id: tool.id,
+        name: tool.name,
+        approved: tool.approvalStatus === 'APPROVED',
+      })),
       knownUserIds: knownUserIds(),
       knownGroupIds: SEED_GROUPS,
     });

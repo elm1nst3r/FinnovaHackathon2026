@@ -623,9 +623,15 @@ tenant_isolation: true
 # resulting runtime permissions
 allowed_data:
   - INTERNAL
-  - CONFIDENTIAL
 personal_data: false
 ```
+
+`allowed_data` is narrower than the assessed attributes would allow, and
+deliberately so: client advisory reaches CONFIDENTIAL through M365 Copilot,
+and ChatGPT Enterprise is staged behind that rollout. This is what makes
+CH-AI-CONF-01 fire on an approved tool, and it is the ordinary case an
+exception exists for — a data class the bank has not yet opened on a tool it
+has already assessed.
 
 **Priority:** Must Have
 

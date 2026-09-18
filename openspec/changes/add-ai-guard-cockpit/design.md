@@ -170,3 +170,72 @@ needed to show that the loop closes.
 - **Demo dependency on a live service.** If the policy service is unavailable
   during the pitch, the extension must still demonstrate enforcement from cache.
   This is a real scenario, not only a resilience nicety.
+
+## Implementation notes
+
+Written during implementation so that whoever picks this up next — person or
+model — does not have to reconstruct it from the diff.
+
+### Where things live
+
+| Path | What it is |
+|---|---|
+| `src/core/` | Pure decision logic. No I/O, no DOM, no fetch. The same modules run in the service, the cockpit and the extension, which is why enforcement and the permissions matrix cannot drift apart. |
+| `src/service/` | Policy service. `identity.ts` (mocked, header-driven), `store.ts` (in-memory, versioned), `routes.ts` (route table with declared entitlements), `http.ts`, `server.ts`. |
+| `src/cockpit/` | Two views behind one shell. `dom.ts` is the only place that touches the DOM directly; `api.ts` is the only place that fetches. |
+| `src/extension/` | Chrome MV3 enforcement point. `storage.ts` is the only module that knows `chrome` exists, which is what makes `sync.ts` and `history.ts` testable under Node. |
+| `src/fixtures/seed.ts` | All demo data. Two personas plus one governance member, six rules, three tools, one exception, two requests. |
+| `test/` | `engine`, `validation`, `api`, `extension`. `npm test` runs them with `node --test`; there is no test framework to learn. |
+
+### Things that will surprise you
+
+- **Node 24 runs the TypeScript directly.** There is no build step for the
+  service or the tests. `npm run build:web` exists only to bundle the browser
+  halves, because a browser cannot strip types. Imports therefore carry `.ts`
+  extensions, and `erasableSyntaxOnly` is on: no `enum`, no `namespace`, no
+  parameter properties. The pattern is
+  `export const X = [...] as const; export type X = (typeof X)[number];`
+- **Authorisation is declared per route, not checked per handler.** A new
+  endpoint cannot forget to check, because the entitlement is part of the route
+  table and the dispatcher enforces it before the handler runs.
+- **The permissions matrix calls `decide()`.** It does not reimplement the rules.
+  If the matrix and the enforcement point ever disagree, that is a bug in one
+  shared function rather than a divergence between two.
+- **`DecisionResult` has no `detectedCategories` field.** Detected categories
+  stay in the content script. The extension's local history carries them
+  because it builds its own `HistoryInput`; nothing server-bound does.
+- **Prompt text is not a parameter of anything outside `guard.ts`.** That is the
+  invariant to preserve. A `grep` for `prompt` across `src/` should keep showing
+  matches only in `guard.ts`, `detect.ts` and `sanitise`.
+
+### Decisions taken during implementation
+
+- **An exception licenses data, not tools.** Approving a request for a
+  registered-but-unapproved tool would have granted a personal exception
+  suppressing `CH-AI-TOOL-01` — self-service ARB bypass, one person at a time.
+  Refused in `validateExceptionDraft`, so it holds for the direct grant too.
+  Specified in `specs/cockpit/exceptions`.
+- **`allowed_data` for ChatGPT Enterprise is `[INTERNAL]`,** not
+  `[INTERNAL, CONFIDENTIAL]` as the first draft of FR-12 had it. Otherwise
+  `CH-AI-CONF-01` never fires on an approved tool and the request-to-exception
+  loop has no realistic trigger. FR-12 was amended to match and to say why.
+- **Expiry is the end of the chosen day in local time.** An exception "until
+  2 November" that lapses at 00:59 on the 3rd is wrong in a product whose whole
+  argument is that access is visibly time-bounded.
+- **Reason prompts are an inline modal, not `window.prompt`.** A reason that
+  justifies a rollback should be typed next to the thing it justifies.
+
+### Known gaps, deliberately left
+
+- **No rule covers INTERNAL on a tool that does not permit it.**
+  `CH-AI-CONF-01` only covers CONFIDENTIAL. Closing it needs a new operator
+  such as `toolAllowedData doesNotPermitCurrentClassification`; not reachable
+  with the current fixtures, so not added.
+- **`guard.ts` replays a blocked submit by dispatching a synthetic
+  `KeyboardEvent`.** This is site-dependent by nature and may need tuning per
+  tool on the day.
+- **Tasks 8.1 and 8.2 are the only open items outside section 9.** Both are
+  manual rehearsals that need the extension loaded in Chrome. The cockpit half
+  of 8.1 — request, approve, matrix flips, exception visible to the employee —
+  has been walked through in the running application; the block-and-retry half
+  has not, because that happens in a real AI tool's page.
