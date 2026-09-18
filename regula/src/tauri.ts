@@ -19,7 +19,7 @@ export async function getConfig(): Promise<AppConfig> {
   const cockpit = q.get("cockpit") ?? "";
   return {
     mock: !cockpit || q.has("mock"),
-    cockpit_url: (cockpit || "https://cockpit.finnova.local").replace(/\/$/, ""),
+    cockpit_url: (cockpit || "http://cockpit.finnova.local").replace(/\/$/, ""),
     lang: q.get("lang") ?? "en",
     desktop: true, // the browser preview has no menu bar, so the companion is always shown
     flipped: false,

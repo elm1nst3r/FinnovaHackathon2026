@@ -12,7 +12,7 @@ npm test             # replays Mira's story through the state machine
 npm run poses        # regenerates docs/poses.svg, the static pose sheet
 ```
 
-Flags for the built binary: `--mock`, `--cockpit https://host`, `--lang de`. Environment: `REGULA_COCKPIT_URL`, `REGULA_LANG`. With no cockpit URL the mock feed is used.
+Flags for the built binary: `--mock`, `--cockpit http://host`, `--lang de`. Environment: `REGULA_COCKPIT_URL`, `REGULA_LANG`. With no cockpit URL the mock feed is used.
 
 Rust: `src-tauri/rust-toolchain.toml` pins a current stable toolchain (Tauri 2.11's dependencies need Rust ≥ 1.85).
 

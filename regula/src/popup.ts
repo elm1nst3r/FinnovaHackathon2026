@@ -79,7 +79,7 @@ async function show(p: Payload) {
 
 async function boot() {
   if (!isTauri) {
-    void show({ text: "CH-ID-01 kept the identifier masked.", deepLink: "https://cockpit.finnova.local/assistant", openLabel: "Open" });
+    void show({ text: "CH-ID-01 kept the identifier masked.", deepLink: "http://cockpit.finnova.local/assistant", openLabel: "Open" });
     return;
   }
   const { listen } = await import("@tauri-apps/api/event");

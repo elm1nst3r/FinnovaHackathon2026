@@ -69,7 +69,7 @@ impl Config {
         }
         if cockpit_url.is_empty() {
             mock = true;
-            cockpit_url = "https://cockpit.finnova.local".to_string();
+            cockpit_url = "http://cockpit.finnova.local".to_string();
         }
         Config {
             mock,
