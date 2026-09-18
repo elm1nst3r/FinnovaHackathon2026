@@ -35,7 +35,8 @@ Next to the menu-bar dot the app prints a number when items wait on the user (pe
 
 - The companion is a **120 × 120 px canvas** with the disc at centre (60, 70), radius 26 (52 px). The face appears only here, never in the menu bar.
 - Either a **single SVG** with all props present and layers named as below, or a **Rive** file with one state machine and a string input `state` taking the nine values. Lottie is the fallback.
-- SVG layer / class names the code drives: `disc`, `pupils` (both eyes, moved for eye contact), `lids`, `brows`, `mouth-smile`, `mouth-flat`, `shield` with `shield-shape`, `ring`, `dashed`, `badge` with `badge-text` (mono rule id such as CH-ACC-01), `pencil`, `sheet`, `confetti`, `zzz`, `badge-offline`, `badge-moon`. Keep the names and the CSS keeps working.
+- SVG layer / class names the code drives: `disc`, `pupils` (both eyes; inside it `eye-white`, `pupil` and `spark` per eye, and only the pupil and its spark move for eye contact), `lids`, `brows`, `mouth-smile`, `mouth-flat`, `shield` with `shield-shape` and `shield-check`, `ring`, `dashed`, `accents` (Dot's motion lines), `shadow`, `badge` with `badge-text` (mono rule id such as CH-ACC-01), `pencil`, `sheet`, `confetti`, `zzz`, `badge-offline`, `badge-moon`. Keep the names and the CSS keeps working.
+- The placeholder now wears the face from the **Dot character set** (`assets/dot/`, see its README): Dot's eye geometry, its asymmetric eye line, its smile, ground shadow and accent lines, scaled by 26/70 onto Regula's r=26 disc. The palette is unchanged finnova tokens, so Dot's ink `#0F1A3C` renders as `--finnova-navy` and its eye white as `--paper`. Dot's own poses (`angry`, `wave`, `excited`, …) are not used; the nine cockpit states remain the vocabulary.
 - Motion rules from the PRD: transitions 300 ms ease-out, no bounce over 4 px, no rotation over 8 degrees, squash and stretch within 6 % of the diameter, the disc is a circle at rest, one accessory at a time. Reduced motion keeps the pose and drops the loop.
 - The reference of the current placeholder is `regula/docs/poses.png`, one still per state.
 
@@ -52,7 +53,8 @@ Only these tokens, taken from the logo SVG and the cockpit design tokens (`regul
 | Muted | #4D5651 | declined and offline badges |
 | Protect tint | #FBEBC8 | shield while protected and pending |
 | Granted tint | #DDEFE4 | shield after approval |
-| Paper | #F6F4EE | eye highlight, sheet |
+| Paper | #F6F4EE | eye whites, sheet |
+| White | #FFFFFF | the highlight inside each pupil (Dot's spark) |
 
 Type: IBM Plex Mono for the rule id, nothing else is text.
 

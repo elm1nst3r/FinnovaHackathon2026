@@ -49,14 +49,24 @@ body {
     fill var(--transition) var(--ease);
 }
 .pet .disc { fill: var(--finnova-pink); }
-.pet .eye { fill: var(--finnova-navy); }
-.pet .spark { fill: var(--paper); opacity: 0.9; }
+.pet .shadow { fill: var(--finnova-navy); opacity: 0.08; }
+/* Dot's eyes: a paper-white ellipse, an offset navy pupil, one highlight */
+.pet .eye-white { fill: var(--paper); }
+.pet .pupil { fill: var(--finnova-navy); }
+.pet .spark { fill: #fff; }
 .pet .lid { fill: var(--finnova-pink); transform-origin: center top; transform: scaleY(0); }
+/* Dot's accent lines: liveliness, only on the poses that earn it */
+.pet .accents { transform-box: view-box; transform-origin: 92px 48px; }
+.pet .accents line { stroke: var(--finnova-pink); stroke-width: 2.2; stroke-linecap: round; opacity: 0; }
 .pet .brow { fill: none; stroke: var(--finnova-navy); stroke-width: 1.6; stroke-linecap: round; opacity: 0; }
 .pet .mouth { fill: none; stroke: var(--finnova-navy); stroke-width: 1.6; stroke-linecap: round; }
 .pet .mouth-flat { opacity: 0; }
 .pet .sleep-eyes path { fill: none; stroke: var(--finnova-navy); stroke-width: 1.8; stroke-linecap: round; opacity: 0; }
-.pet .pupils { transform: translate(var(--lx, 0px), var(--ly, 0px)); transition: transform 120ms var(--ease); }
+/* Eye contact moves the pupil and its highlight inside Dot's eye white, which
+   stays put; the .pupils group keeps its name so the rest of the CSS and the
+   design handover's layer list still apply. */
+.pet .pupils .pupil,
+.pet .pupils .spark { transform: translate(var(--lx, 0px), var(--ly, 0px)); transition: transform 120ms var(--ease); }
 
 .pet .breath, .pet .hop, .pet .body { transform-box: view-box; transform-origin: 60px 96px; }
 .pet .face { transform-box: view-box; transform-origin: 60px 70px; }
@@ -72,6 +82,7 @@ body {
 .pet .ring circle { transform-box: view-box; fill: none; stroke: var(--finnova-navy); stroke-width: 1.6; stroke-dasharray: 1.5 6; stroke-linecap: round; opacity: 0; transform-origin: 60px 70px; }
 .pet .shield { transform-box: view-box; opacity: 0; transform: translate(78px, 88px); transform-origin: 0 0; }
 .pet .shield-shape { fill: var(--protect); stroke: var(--finnova-navy); stroke-width: 1.6; stroke-linejoin: round; transform-box: view-box; transform-origin: 0 0; }
+.pet .shield-check { fill: none; stroke: var(--finnova-navy); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pet .confetti rect { opacity: 0; }
 .pet .confetti .c1 { fill: var(--granted); }
 .pet .confetti .c2 { fill: var(--finnova-green); }
@@ -98,6 +109,7 @@ body {
 @keyframes shield-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
 @keyframes glance { 0%, 82%, 100% { transform: translate(var(--lx, 0px), var(--ly, 0px)); } 86%, 96% { transform: translate(1.8px, -1.6px); } }
 @keyframes hop { 0% { transform: translateY(0) scale(1, 1); } 12% { transform: translateY(0) scale(1.05, 0.95); } 40% { transform: translateY(-4px) scale(0.97, 1.03); } 62% { transform: translateY(0) scale(1.04, 0.96); } 80%, 100% { transform: translateY(0) scale(1, 1); } }
+@keyframes accent-pop { 0% { opacity: 0; transform: scale(0.6); } 30% { opacity: 1; transform: scale(1); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
 @keyframes confetti-fall { 0% { opacity: 0; transform: translateY(0) rotate(0deg); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(26px) rotate(140deg); } }
 @keyframes nod { 0%, 100% { transform: translateY(2px) rotate(0deg); } 55% { transform: translateY(2px) rotate(0deg); } 65% { transform: translateY(3.5px) rotate(2deg); } 75% { transform: translateY(2px) rotate(0deg); } 85% { transform: translateY(3px) rotate(2deg); } }
 @keyframes scan { 0%, 100% { transform: translate(-1.6px, 1px); } 45%, 55% { transform: translate(1.8px, 1px); } }
@@ -106,7 +118,8 @@ body {
 /* ---------------------------------------------------------------- poses */
 /* Idle: breath (disc scales by 2 %), blink, a glance down at the ledger every ~40 s */
 .pet[data-state="idle"] .breath { animation: breath 3s ease-in-out infinite; }
-.pet[data-state="idle"] .pupils { animation: ledger-glance 40s linear infinite; }
+.pet[data-state="idle"] .pupil,
+.pet[data-state="idle"] .spark { animation: ledger-glance 40s linear infinite; }
 
 /* Working: eyes narrow in concentration, dotted ring orbits the disc */
 .pet[data-state="working"] .lid { transform: scaleY(0.38); }
@@ -127,7 +140,8 @@ body {
 .pet[data-state="pending"] .shield { opacity: 1; transform: translate(89px, 80px) scale(0.72); }
 .pet[data-state="pending"] .dashed circle { opacity: 1; }
 .pet[data-state="pending"] .breath { animation: breath 4s ease-in-out infinite; }
-.pet[data-state="pending"] .pupils { animation: glance 10s ease-in-out infinite; }
+.pet[data-state="pending"] .pupil,
+.pet[data-state="pending"] .spark { animation: glance 10s ease-in-out infinite; }
 
 /* Granted: one hop with squash and stretch, shield turns green, three confetti squares */
 .pet[data-state="granted"] .shield { opacity: 1; transform: translate(77px, 86px); }
@@ -137,11 +151,18 @@ body {
 .pet[data-state="granted"] .confetti .c2 { animation-delay: 120ms; }
 .pet[data-state="granted"] .confetti .c3 { animation-delay: 240ms; }
 .pet[data-state="granted"] .breath { animation: breath 3s ease-in-out infinite; }
+.pet[data-state="granted"] .accents line { opacity: 1; }
+.pet[data-state="granted"].oneshot .accents { animation: accent-pop 1.5s var(--ease) 1; }
+.pet[data-state="granted"] .shield-check { stroke: var(--finnova-green); }
 
 /* Declined: disc sinks 2 px, eyes drop, mouth flattens, then a small nod */
 .pet[data-state="declined"] .body { transform: translateY(2px); }
-.pet[data-state="declined"] .pupils { transform: translate(var(--lx, 0px), calc(var(--ly, 0px) + 1.5px)); }
+.pet[data-state="declined"] .pupil,
+.pet[data-state="declined"] .spark { transform: translate(var(--lx, 0px), calc(var(--ly, 0px) + 1.5px)); }
 .pet[data-state="declined"] .lid { transform: scaleY(0.45); }
+.pet[data-state="declined"] .brow { opacity: 1; }
+.pet[data-state="declined"] .brow-l { transform: rotate(10deg); }
+.pet[data-state="declined"] .brow-r { transform: rotate(-10deg); }
 .pet[data-state="declined"] .mouth-smile { opacity: 0; }
 .pet[data-state="declined"] .mouth-flat { opacity: 1; }
 .pet[data-state="declined"].oneshot .body { animation: nod 2s var(--ease) 1; }
@@ -149,7 +170,8 @@ body {
 /* Sign-off: pencil leans on the disc, sheet at its foot, eyes scan a line */
 .pet[data-state="signoff"] .pencil path { opacity: 1; }
 .pet[data-state="signoff"] .sheet { opacity: 1; }
-.pet[data-state="signoff"] .pupils { animation: scan 3s ease-in-out infinite; }
+.pet[data-state="signoff"] .pupil,
+.pet[data-state="signoff"] .spark { animation: scan 3s ease-in-out infinite; }
 .pet[data-state="signoff"] .breath { animation: breath 3s ease-in-out infinite; }
 
 /* Offline: eyes closed, zzz, grey dot badge, disc fades to the muted pink. Paused: same with a moon badge */
@@ -157,6 +179,8 @@ body {
 .pet[data-state="paused"] .disc { fill: var(--pink-muted); }
 .pet[data-state="offline"] .lid,
 .pet[data-state="paused"] .lid { fill: var(--pink-muted); transform: scaleY(1); }
+.pet[data-state="offline"] .shadow,
+.pet[data-state="paused"] .shadow { opacity: 0.05; }
 .pet[data-state="offline"] .sleep-eyes path,
 .pet[data-state="paused"] .sleep-eyes path { opacity: 1; }
 .pet[data-state="offline"] .zzz text,
