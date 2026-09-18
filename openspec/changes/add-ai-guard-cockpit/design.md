@@ -239,3 +239,47 @@ model — does not have to reconstruct it from the diff.
   of 8.1 — request, approve, matrix flips, exception visible to the employee —
   has been walked through in the running application; the block-and-retry half
   has not, because that happens in a real AI tool's page.
+
+### Where to pick this up
+
+**State:** 37/44 tasks. `openspec validate add-ai-guard-cockpit --strict` passes,
+`npx tsc --noEmit` is clean, `npm test` is 72/72 green, `npm run build:web`
+produces both bundles. Everything is committed and pushed to `main`.
+
+**The change is deliberately still active.** Its delta specs have *not* been
+synced into `openspec/specs/`, which is therefore empty. Syncing now would write
+`Shadow Mode` — a Post-MVP requirement nobody built — into the main spec as
+delivered system behaviour. Sync and archive belong after section 8 passes. Run
+`openspec instructions apply --change add-ai-guard-cockpit --json` to resume; the
+CLI is the source of truth for what is left, not this list.
+
+**The two open tasks, in order:**
+
+1. **8.1 — end-to-end rehearsal.** Load `dist/extension/` as an unpacked
+   extension in Chrome with the service running. As Luca, send a prompt
+   containing a salutation and an IBAN to an approved tool while declaring
+   CONFIDENTIAL. Expect a `BLOCK` sheet; raise the request from it. Switch the
+   cockpit to Sara, approve with a reason and an expiry. Re-send the same
+   prompt: it must now get through. The cockpit half of this already works; what
+   is unproven is `guard.ts` against a live page.
+2. **8.2 — the same path with the service stopped.** Kill the server, reload the
+   tool page, send the prompt again. Enforcement must continue from cache: not
+   failing open, not failing shut. To see the staleness banner without waiting a
+   day, lower `STALE_AFTER_HOURS` in `src/extension/sync.ts`.
+
+Both need a logged-in session on a real AI tool, which is why they were left for
+a human. A local stub page would have meant widening `manifest.json` to a host
+that is not a real tool, and would have proved nothing about the real one.
+
+**Then, and only then:** run the sync and the archive. Section 9 is genuinely
+deferred — do not start it to make a number go up.
+
+### Design questions still open for the team
+
+- **Nothing blocks INTERNAL on a tool whose `allowed_data` omits it.** See the
+  gap above. Worth a decision before anyone claims the rule set is complete.
+- **`guard.ts` re-send is site-dependent.** If the demo tool changes, this is
+  the first thing that will break.
+- **The Finnova logo is not in the product.** `docs/brand/finnova-corporate-design.md`
+  records the CD rules and the cockpit uses the palette and type system, but the
+  wordmark needs the official asset and the manual's clear-space rules.
