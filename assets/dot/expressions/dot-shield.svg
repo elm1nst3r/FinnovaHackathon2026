@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot shield">
+  <ellipse cx="100" cy="176" rx="46" ry="8" fill="#0F1A3C" opacity="0.08"/>
+  <circle cx="100" cy="100" r="70" fill="#F042BE"/>
+  <ellipse cx="84" cy="96" rx="16" ry="21" fill="#FFFFFF"/>
+  <ellipse cx="122" cy="92" rx="16" ry="21" fill="#FFFFFF"/>
+  <circle cx="91" cy="100" r="8" fill="#0F1A3C"/>
+  <circle cx="129" cy="96" r="8" fill="#0F1A3C"/>
+  <circle cx="93.5" cy="96.5" r="2.4" fill="#FFFFFF"/>
+  <circle cx="131.5" cy="92.5" r="2.4" fill="#FFFFFF"/>
+  <!-- shield emblem -->
+  <g transform="translate(128 118)">
+    <path d="M22 0 L44 8 V26 C44 42 34 52 22 58 C10 52 0 42 0 26 V8 Z" fill="#9AA3B2" stroke="#0F1A3C" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M11 28 L19 37 L34 18" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

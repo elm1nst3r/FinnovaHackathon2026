@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot angry">
+  <ellipse cx="100" cy="176" rx="46" ry="8" fill="#0F1A3C" opacity="0.08"/>
+  <circle cx="100" cy="100" r="70" fill="#F042BE"/>
+  <!-- angry brows -->
+  <path d="M70 80 L98 90" fill="none" stroke="#0F1A3C" stroke-width="6" stroke-linecap="round"/>
+  <path d="M130 80 L102 90" fill="none" stroke="#0F1A3C" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="84" cy="102" rx="14" ry="16" fill="#FFFFFF"/>
+  <ellipse cx="122" cy="102" rx="14" ry="16" fill="#FFFFFF"/>
+  <circle cx="87" cy="104" r="7.5" fill="#0F1A3C"/>
+  <circle cx="119" cy="104" r="7.5" fill="#0F1A3C"/>
+  <path d="M84 132 Q100 122 116 132" fill="none" stroke="#0F1A3C" stroke-width="6" stroke-linecap="round"/>
+</svg>

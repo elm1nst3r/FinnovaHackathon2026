@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot wink">
+  <ellipse cx="100" cy="176" rx="46" ry="8" fill="#0F1A3C" opacity="0.08"/>
+  <circle cx="100" cy="100" r="70" fill="#F042BE"/>
+  <ellipse cx="84" cy="94" rx="16" ry="21" fill="#FFFFFF"/>
+  <circle cx="88" cy="98" r="8" fill="#0F1A3C"/>
+  <circle cx="90.5" cy="94.5" r="2.4" fill="#FFFFFF"/>
+  <!-- wink eye -->
+  <path d="M108 96 Q122 84 136 96" fill="none" stroke="#0F1A3C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M86 124 Q102 136 118 122" fill="none" stroke="#0F1A3C" stroke-width="6" stroke-linecap="round"/>
+</svg>

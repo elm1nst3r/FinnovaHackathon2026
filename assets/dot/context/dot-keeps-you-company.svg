@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 160" width="260" height="160" role="img" aria-label="Dot keeps you company, sitting on a window">
+  <!-- window / toolbar -->
+  <rect x="24" y="70" width="212" height="66" rx="12" fill="#FFFFFF" stroke="#0F1A3C" stroke-width="2" opacity="0.9"/>
+  <circle cx="46" cy="88" r="5" fill="#F042BE"/>
+  <circle cx="64" cy="88" r="5" fill="#F5A623"/>
+  <circle cx="82" cy="88" r="5" fill="#9AA3B2"/>
+  <rect x="40" y="104" width="150" height="8" rx="4" fill="#E9ECF2"/>
+  <!-- Dot sitting on the top edge -->
+  <ellipse cx="150" cy="70" rx="30" ry="5" fill="#0F1A3C" opacity="0.08"/>
+  <circle cx="150" cy="42" r="34" fill="#F042BE"/>
+  <ellipse cx="143" cy="40" rx="8" ry="11" fill="#FFFFFF"/>
+  <ellipse cx="162" cy="38" rx="8" ry="11" fill="#FFFFFF"/>
+  <circle cx="146" cy="42" r="4" fill="#0F1A3C"/>
+  <circle cx="165" cy="40" r="4" fill="#0F1A3C"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot thinking with a glow">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="55%" stop-color="#F042BE" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#F042BE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="178" rx="42" ry="7" fill="#0F1A3C" opacity="0.08"/>
+  <circle cx="100" cy="100" r="92" fill="url(#glow)"/>
+  <!-- thinking dots -->
+  <g fill="#0F1A3C">
+    <circle cx="84" cy="26" r="4.5"/>
+    <circle cx="100" cy="22" r="4.5"/>
+    <circle cx="116" cy="26" r="4.5"/>
+  </g>
+  <circle cx="100" cy="100" r="66" fill="#F042BE"/>
+  <ellipse cx="86" cy="92" rx="15" ry="20" fill="#FFFFFF"/>
+  <ellipse cx="120" cy="88" rx="15" ry="20" fill="#FFFFFF"/>
+  <circle cx="82" cy="84" r="7.5" fill="#0F1A3C"/>
+  <circle cx="116" cy="80" r="7.5" fill="#0F1A3C"/>
+  <circle cx="84.5" cy="80.5" r="2.2" fill="#FFFFFF"/>
+  <circle cx="118.5" cy="76.5" r="2.2" fill="#FFFFFF"/>
+</svg>

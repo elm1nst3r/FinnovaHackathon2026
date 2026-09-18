@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" width="200" height="160" role="img" aria-label="Dot stays close to your cursor">
+  <ellipse cx="80" cy="132" rx="34" ry="6" fill="#0F1A3C" opacity="0.08"/>
+  <g stroke="#F042BE" stroke-width="4" stroke-linecap="round">
+    <line x1="118" y1="36" x2="130" y2="28"/>
+    <line x1="110" y1="28" x2="116" y2="16"/>
+  </g>
+  <circle cx="80" cy="72" r="48" fill="#F042BE"/>
+  <ellipse cx="70" cy="68" rx="11" ry="15" fill="#FFFFFF"/>
+  <ellipse cx="96" cy="66" rx="11" ry="15" fill="#FFFFFF"/>
+  <circle cx="76" cy="72" r="5.5" fill="#0F1A3C"/>
+  <circle cx="102" cy="70" r="5.5" fill="#0F1A3C"/>
+  <circle cx="78" cy="69" r="1.7" fill="#FFFFFF"/>
+  <circle cx="104" cy="67" r="1.7" fill="#FFFFFF"/>
+  <!-- cursor -->
+  <g transform="translate(120 78)">
+    <path d="M0 0 L0 26 L7 19 L12 30 L17 28 L12 17 L21 17 Z" fill="#0F1A3C" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round"/>
+  </g>
+</svg>

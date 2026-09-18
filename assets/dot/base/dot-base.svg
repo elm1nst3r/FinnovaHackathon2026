@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220" role="img" aria-label="Dot mascot, base">
+  <ellipse cx="112" cy="196" rx="56" ry="9" fill="#0F1A3C" opacity="0.08"/>
+  <!-- accent lines -->
+  <g stroke="#F042BE" stroke-width="6" stroke-linecap="round">
+    <line x1="178" y1="52" x2="196" y2="40"/>
+    <line x1="168" y1="40" x2="178" y2="24"/>
+    <line x1="190" y1="70" x2="208" y2="64"/>
+  </g>
+  <!-- body -->
+  <circle cx="110" cy="104" r="80" fill="#F042BE"/>
+  <!-- eyes -->
+  <ellipse cx="92" cy="100" rx="19" ry="25" fill="#FFFFFF"/>
+  <ellipse cx="136" cy="94" rx="19" ry="25" fill="#FFFFFF"/>
+  <circle cx="100" cy="105" r="10" fill="#0F1A3C"/>
+  <circle cx="144" cy="99" r="10" fill="#0F1A3C"/>
+  <circle cx="103" cy="101" r="3" fill="#FFFFFF"/>
+  <circle cx="147" cy="95" r="3" fill="#FFFFFF"/>
+</svg>

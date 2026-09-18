@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot has a notification">
+  <ellipse cx="100" cy="176" rx="46" ry="8" fill="#0F1A3C" opacity="0.08"/>
+  <circle cx="100" cy="100" r="70" fill="#F042BE"/>
+  <ellipse cx="84" cy="96" rx="16" ry="21" fill="#FFFFFF"/>
+  <ellipse cx="122" cy="92" rx="16" ry="21" fill="#FFFFFF"/>
+  <circle cx="91" cy="100" r="8" fill="#0F1A3C"/>
+  <circle cx="129" cy="96" r="8" fill="#0F1A3C"/>
+  <circle cx="93.5" cy="96.5" r="2.4" fill="#FFFFFF"/>
+  <circle cx="131.5" cy="92.5" r="2.4" fill="#FFFFFF"/>
+  <!-- notification badge -->
+  <circle cx="150" cy="44" r="20" fill="#F5A623" stroke="#FFFFFF" stroke-width="4"/>
+  <rect x="147" y="34" width="6" height="14" rx="3" fill="#FFFFFF"/>
+  <circle cx="150" cy="54" r="3.2" fill="#FFFFFF"/>
+</svg>

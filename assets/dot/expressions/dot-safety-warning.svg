@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Dot safety warning">
+  <ellipse cx="100" cy="176" rx="46" ry="8" fill="#0F1A3C" opacity="0.08"/>
+  <g stroke="#F5A623" stroke-width="5" stroke-linecap="round">
+    <line x1="150" y1="30" x2="164" y2="20"/>
+    <line x1="140" y1="22" x2="147" y2="8"/>
+  </g>
+  <circle cx="100" cy="100" r="70" fill="#F042BE"/>
+  <ellipse cx="84" cy="96" rx="16" ry="21" fill="#FFFFFF"/>
+  <ellipse cx="122" cy="92" rx="16" ry="21" fill="#FFFFFF"/>
+  <circle cx="88" cy="100" r="8" fill="#0F1A3C"/>
+  <circle cx="126" cy="96" r="8" fill="#0F1A3C"/>
+  <circle cx="90.5" cy="96.5" r="2.4" fill="#FFFFFF"/>
+  <circle cx="128.5" cy="92.5" r="2.4" fill="#FFFFFF"/>
+  <!-- warning triangle -->
+  <g transform="translate(126 112)">
+    <path d="M26 2 L52 50 H0 Z" fill="#FFFFFF" stroke="#F5A623" stroke-width="6" stroke-linejoin="round"/>
+    <rect x="23" y="18" width="6" height="18" rx="3" fill="#F5A623"/>
+    <circle cx="26" cy="42" r="3.4" fill="#F5A623"/>
+  </g>
+</svg>

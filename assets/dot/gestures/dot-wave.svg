@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 200" width="210" height="200" role="img" aria-label="Dot waves hello">
+  <ellipse cx="96" cy="176" rx="46" ry="8" fill="#0F1A3C" opacity="0.08"/>
+  <!-- motion lines -->
+  <g fill="none" stroke="#0F1A3C" stroke-width="3.5" stroke-linecap="round" opacity="0.4">
+    <path d="M176 66 q10 8 0 18"/>
+    <path d="M186 58 q14 12 0 30"/>
+  </g>
+  <circle cx="96" cy="100" r="66" fill="#F042BE"/>
+  <ellipse cx="82" cy="96" rx="15" ry="20" fill="#FFFFFF"/>
+  <ellipse cx="118" cy="92" rx="15" ry="20" fill="#FFFFFF"/>
+  <circle cx="88" cy="100" r="7.5" fill="#0F1A3C"/>
+  <circle cx="124" cy="96" r="7.5" fill="#0F1A3C"/>
+  <circle cx="90.5" cy="96.5" r="2.2" fill="#FFFFFF"/>
+  <circle cx="126.5" cy="92.5" r="2.2" fill="#FFFFFF"/>
+  <path d="M80 124 Q96 138 112 124" fill="none" stroke="#0F1A3C" stroke-width="6" stroke-linecap="round"/>
+  <!-- waving hand -->
+  <g transform="translate(150 60)">
+    <circle cx="12" cy="20" r="15" fill="#F042BE" stroke="#0F1A3C" stroke-width="3.5"/>
+    <g stroke="#0F1A3C" stroke-width="3.5" stroke-linecap="round">
+      <line x1="6" y1="10" x2="4" y2="2"/>
+      <line x1="12" y1="8" x2="12" y2="-1"/>
+      <line x1="18" y1="10" x2="21" y2="2"/>
+    </g>
+  </g>
+</svg>
