@@ -2,7 +2,7 @@
 
 As of 2026-09-18 · for the finnova design team · owner of the code: HackLenzburg 2026 Regula team
 
-Regula is the pink full stop of the finnova logo, living in the macOS menu bar and, if the advisor opts in, as a small companion on the desktop. The POC ships with a placeholder dot drawn in code. This document says what we need from design to replace it, in which format, and which rules the assets must follow so they drop into the app without rework. PRD: `docs/finnova-pet-prd.md`.
+Regula is the pink full stop of the finnova logo, living in the macOS menu bar and, if the advisor opts in, as a small companion on the desktop. The POC ships with a placeholder dot drawn in code. This document says what we need from design to replace it, in which format, and which rules the assets must follow so they drop into the app without rework. PRD: `docs/prd/finnova-pet-prd.md`.
 
 ## What the dot has to say
 

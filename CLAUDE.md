@@ -4,13 +4,23 @@ Finnova Hackathon 2026 (12 hours, 18 Sep 2026). Process: `CONTRIBUTING.md`.
 
 ## Project
 
-Regula, the pink full stop of the finnova logo as a menu-bar dot (default) and an opt-in desktop companion for the Finnova AI Cockpit. macOS only for the POC. PRD: `docs/finnova-pet-prd.md`. The app lives in `regula/` (Tauri 2 shell in Rust, Vite + TypeScript frontend, no framework, inline SVG rig of the pink finnova full stop with a face in `regula/src/rig.ts`, animated with CSS). The cockpit web app is not in this repo; Regula only consumes its event feed.
+One repo, one product family, **Regula**, the pink full stop of the finnova logo:
 
-The repo also holds **Finnova AI Guard**, a browser extension that decides `ALLOW` / `MAKE_SAFE` / `BLOCK` before a prompt leaves the browser. Spec: `docs/prd/finnova-ai-guard-prd.md`. Detection and policy evaluation run inside the extension; no backend receives prompt content. Rule IDs follow `CH-AI-<nn>`.
+- **regula.dot** — `regula/`: the dot as a macOS menu-bar icon (default) and an opt-in desktop companion. Tauri 2 shell in Rust, Vite + TypeScript frontend, no framework, inline SVG rig of the dot with a face in `regula/src/rig.ts`, animated with CSS. It consumes the cockpit's event feed and never shows prompt content. PRD: `docs/prd/finnova-pet-prd.md`, design handover: `docs/brand/regula-dot-design-handover.md`. `src/extension/` is the browser extension side of the same product: it decides `ALLOW` / `MAKE_SAFE` / `BLOCK` before a prompt leaves the browser, with detection and policy evaluation inside the extension and no backend receiving prompt content. Rule IDs follow `CH-AI-<nn>`. Spec: `docs/prd/finnova-ai-guard-prd.md`.
+- **regula.cockpit** — `src/cockpit/` (web app), `src/service/` (policy service) and `src/core/` (shared decision logic). Binding requirements live in `openspec/changes/add-ai-guard-cockpit/`.
+- **regula.gateway** — concept only, `docs/prd/regula-ai-gateway.md` and the pitch pages in `docs/pitch/`.
+
+Brand rules: `docs/brand/finnova-corporate-design.md`.
 
 ## Commands
 
-Run from `regula/`:
+Root (`package.json`, cockpit, service, extension):
+
+- `npm install` once
+- `npm run dev` builds the web assets and serves the cockpit (`npm run build:web`, `npm run serve` separately)
+- `npm test` (node test runner over `test/`), `npm run typecheck`
+
+`regula/` (regula.dot, own `package.json`):
 
 - `npm install` once
 - `npm start` runs the Tauri app with the scripted mock feed
@@ -21,7 +31,7 @@ Run from `regula/`:
 
 Rust toolchain is pinned in `regula/src-tauri/rust-toolchain.toml`; the global default toolchain is too old for Tauri 2.11.
 
-## Conventions
+## Conventions (regula.dot)
 
 - The state machine (`regula/src/state.ts`) is the only thing that talks to the feed; views render the model and open deep links, nothing else.
 - Regula never displays values, client names or conversation text. Event types in `regula/src/types.ts` have no field for them; keep it that way.

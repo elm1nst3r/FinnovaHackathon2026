@@ -1,6 +1,6 @@
 # Regula, the Finnova desktop pet (POC)
 
-Regula is the pink full stop from the finnova logo with a face. It sits on a finnova employee's desktop and mirrors the state of the Finnova AI Cockpit. This is the hackathon proof of concept described in [docs/finnova-pet-prd.md](../docs/finnova-pet-prd.md).
+Regula is the pink full stop from the finnova logo with a face. It sits on a finnova employee's desktop and mirrors the state of the Finnova AI Cockpit. This is the hackathon proof of concept described in [docs/prd/finnova-pet-prd.md](../docs/prd/finnova-pet-prd.md).
 
 ## Run
 
