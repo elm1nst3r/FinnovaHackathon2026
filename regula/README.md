@@ -16,6 +16,12 @@ Flags for the built binary: `--mock`, `--cockpit http://host`, `--lang de`. Envi
 
 Rust: `src-tauri/rust-toolchain.toml` pins a current stable toolchain (Tauri 2.11's dependencies need Rust ≥ 1.85).
 
+## Install the built app (macOS, Apple silicon)
+
+A ready-made installer is committed at [release/Regula_0.1.0_aarch64.dmg](release/Regula_0.1.0_aarch64.dmg). Open it, drag Regula to Applications, then start it. The build is unsigned, so on first launch macOS blocks it: right-click Regula in Applications, choose Open, and confirm. Once running, the dot appears in the menu bar and talks to `http://cockpit.finnova.local` unless `REGULA_COCKPIT_URL` says otherwise.
+
+Rebuild it with `npm run tauri build -- --bundles dmg` and copy the result from `src-tauri/target/release/bundle/dmg/` into `release/`.
+
 ## Demo controls (mock feed only)
 
 | Key | Action |
