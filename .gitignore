@@ -46,3 +46,6 @@ venv/
 # Browser extension build output
 *.zip
 *.crx
+
+# Archify visual-check QA artifacts
+*.visual-check.*

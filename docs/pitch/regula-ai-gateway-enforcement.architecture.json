@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "How the Gateway Gets in the Middle — Every AI Call on the Device",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [1220, 600],
+    "views": [
+      {
+        "id": "capture",
+        "label": "Captured on the device",
+        "focus": ["ide", "browser", "app", "egress"],
+        "note": "IDE, browser and native apps all hit the always-on device egress."
+      },
+      {
+        "id": "enforce",
+        "label": "Forced through the gateway",
+        "focus": ["egress", "gateway", "firewall", "providers"],
+        "note": "Only the gateway may reach providers; TLS is inspected to apply policy."
+      }
+    ]
+  },
+  "components": [
+    { "id": "ide", "type": "frontend", "label": "IDE Assistant", "sublabel": "Copilot · Cursor", "pos": [40, 110], "size": [168, 60] },
+    { "id": "browser", "type": "frontend", "label": "Browser AI", "sublabel": "ChatGPT · Claude web", "pos": [40, 240], "size": [168, 60] },
+    { "id": "app", "type": "frontend", "label": "Desktop App", "sublabel": "Claude · ChatGPT app", "pos": [40, 370], "size": [168, 60] },
+
+    { "id": "egress", "type": "security", "label": "Device Egress", "sublabel": "always-on VPN / proxy", "tag": "MDM push", "pos": [300, 240], "size": [168, 64] },
+    { "id": "gateway", "type": "security", "label": "Regula AI Gateway", "sublabel": "TLS inspect · policy engine", "tag": "ALLOW · MAKE SAFE · BLOCK", "pos": [548, 240], "size": [186, 64] },
+    { "id": "firewall", "type": "security", "label": "Egress Firewall", "sublabel": "allowlist: gateway only", "pos": [812, 240], "size": [168, 64] },
+
+    { "id": "providers", "type": "external", "label": "AI Providers", "sublabel": "OpenAI · Anthropic · Gemini", "pos": [1014, 240], "size": [190, 64] }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "Managed employee device — MDM enrolled", "wraps": ["ide", "browser", "app", "egress"], "pad": 24 },
+    { "kind": "region", "label": "Finnova network perimeter", "wraps": ["gateway", "firewall"], "pad": 20 }
+  ],
+  "connections": [
+    { "from": "ide", "to": "egress", "variant": "emphasis" },
+    { "from": "browser", "to": "egress", "label": "all AI-bound traffic", "variant": "emphasis", "labelAt": [384, 330] },
+    { "from": "app", "to": "egress", "variant": "emphasis" },
+
+    { "from": "egress", "to": "gateway", "label": "encrypted tunnel", "variant": "emphasis", "labelAt": [508, 330] },
+    { "from": "gateway", "to": "firewall", "label": "allowed egress", "labelAt": [773, 330] },
+    { "from": "firewall", "to": "providers", "label": "provider call", "variant": "emphasis", "labelAt": [997, 330] },
+
+    { "from": "app", "to": "providers", "label": "direct egress — DENIED", "variant": "dashed", "fromSide": "bottom", "toSide": "bottom", "via": [[124, 525], [1109, 525]], "labelAt": [600, 539] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "How it is enforced", "items": ["MDM (Intune / Jamf) pushes an always-on VPN or system proxy (PAC)", "An enterprise root CA lets the gateway terminate TLS and apply policy", "The device has no route to AI providers except through the gateway"] },
+    { "dot": "violet", "title": "Why it covers everything", "items": ["Enforcement is network-level, not per-application", "IDE assistants, browsers and native desktop apps are captured the same way", "No integration or plugin needed per AI tool"] },
+    { "dot": "emerald", "title": "Fail closed", "items": ["Off-VPN, unmanaged device or bypass attempt = no route to any provider", "The egress firewall allowlists only the gateway", "AI Guard in the browser stays as a second, in-page layer"] }
+  ]
+}
