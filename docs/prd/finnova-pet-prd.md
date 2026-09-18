@@ -211,7 +211,7 @@ Cockpit integration contract (to be added to the cockpit web app; this is the on
 | Feed | `GET /api/pet/events` as Server-Sent Events, one JSON event per line, with `Last-Event-ID` for resume. |
 | Event kinds | `assistant.working`, `assistant.done`, `protection.fired`, `request.sent`, `request.granted`, `request.declined`, `draft.signoff_needed`, `draft.signed`, `counters.changed`, `approver.request_received` |
 | Event payload | Only: event id, kind, time, item label, rule id, approver display name, deep link, and for counters the four integers. No values, no conversation text. |
-| Deep links | `https://<cockpit>/access#requests`, `/access?item=iban`, `/assistant?conv=<id>`, `/approver?request=<id>` |
+| Deep links | `http://<cockpit>/access#requests`, `/access?item=iban`, `/assistant?conv=<id>`, `/approver?request=<id>` |
 | Snapshot | `GET /api/pet/state` returns the same shape as one `counters.changed` plus the pending list, used on start and after reconnect. |
 
 Runtime behaviour: the state machine derives Regula's state purely from the latest snapshot plus the events since, so a replay always ends in the right state. Events older than 24 h are ignored. The pet stores nothing on disk except window position, settings and the keychain token.

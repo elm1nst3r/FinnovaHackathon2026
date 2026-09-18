@@ -31,7 +31,7 @@ const TRAY_ID: &str = "regula";
 /// Startup configuration derived from CLI flags, environment and settings.
 ///
 /// `regula --mock` replays the scripted hackathon story.
-/// `regula --cockpit https://host` subscribes to the real event feed.
+/// `regula --cockpit http://host` subscribes to the real event feed.
 /// With neither flag the mock feed is used, so a plain `npm start` always demos.
 #[derive(Clone, Serialize)]
 struct Config {
