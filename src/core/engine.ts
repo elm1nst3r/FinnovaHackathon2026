@@ -1,6 +1,7 @@
 import {
   PERSONAL_DATA_CATEGORIES,
   SANITISABLE_CATEGORIES,
+  decisionRank,
   isSuppressible,
   mostRestrictive,
 } from './model.ts';
@@ -219,4 +220,28 @@ export function toAuditEvent(
     registryVersion: result.registryVersion,
     shadowOutcomes: result.shadowOutcomes,
   };
+}
+
+/** One tool's answer in a survey of the whole registry. */
+export interface ToolVerdict {
+  tool: Tool;
+  result: DecisionResult;
+}
+
+/**
+ * The same decision, asked for every registered tool at once, for a text that
+ * has not been typed anywhere yet. This is what answers "where may this go?"
+ * when the employee asks before choosing a tool. It is a survey, not an
+ * interaction: the caller records nothing. Most permissive answer first.
+ */
+export function decideAcrossRegistry(
+  request: Omit<DecisionRequest, 'toolId' | 'toolLabel'>,
+  context: EnforcementContext,
+): ToolVerdict[] {
+  return context.registry.tools
+    .map((tool) => ({
+      tool,
+      result: decide({ ...request, toolId: tool.id, toolLabel: tool.name }, context),
+    }))
+    .sort((a, b) => decisionRank(a.result.decision) - decisionRank(b.result.decision));
 }

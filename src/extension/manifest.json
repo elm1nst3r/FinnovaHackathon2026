@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Governs what leaves the bank when employees use AI tools, and shows each employee their own record of it.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "alarms"],
+  "permissions": ["storage", "alarms", "contextMenus", "activeTab", "scripting"],
   "host_permissions": [
     "http://127.0.0.1:8787/*",
     "http://localhost:8787/*",

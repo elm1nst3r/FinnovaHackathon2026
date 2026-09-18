@@ -2,70 +2,11 @@ import type { DecisionResult } from '../core/engine.ts';
 import type { Classification } from '../core/model.ts';
 import { detect, raiseClassification, sanitise } from './detect.ts';
 import type { DecideMessage, DecideReply } from './background.ts';
+import { mountRoot } from './overlay.ts';
+import { ACTIVE_KEY } from './active.ts';
 
 const SHADOW_HOST_ID = 'aig-guard-root';
 const CLASSIFICATION_KEY = 'aig.classification';
-
-/**
- * The bar and the intervention live in a shadow root. The page's own stylesheet
- * cannot reach in to hide a block notice, and nothing in the page can read the
- * decision back out.
- */
-function mountRoot(): ShadowRoot {
-  const existing = document.getElementById(SHADOW_HOST_ID);
-  if (existing?.shadowRoot) return existing.shadowRoot;
-
-  const host = document.createElement('div');
-  host.id = SHADOW_HOST_ID;
-  document.documentElement.append(host);
-  const shadow = host.attachShadow({ mode: 'closed' });
-
-  const style = document.createElement('style');
-  style.textContent = STYLES;
-  shadow.append(style);
-  return shadow;
-}
-
-const STYLES = `
-:host { all: initial; }
-.bar, .sheet {
-  font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #16181d;
-}
-.bar {
-  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 10px;
-  background: #fff; border: 1px solid #e2e5ea; border-radius: 999px;
-  padding: 7px 14px; box-shadow: 0 6px 22px rgba(0,0,0,.14); z-index: 2147483646;
-}
-.bar .dot { width: 9px; height: 9px; border-radius: 50%; background: #1f4ed8; }
-.bar select { font: inherit; border: 1px solid #e2e5ea; border-radius: 6px; padding: 2px 6px; }
-.bar .stale { color: #9a6100; max-width: 260px; }
-.backdrop {
-  position: fixed; inset: 0; background: rgba(16,18,22,.55);
-  display: flex; align-items: center; justify-content: center; z-index: 2147483647;
-}
-.sheet {
-  background: #fff; border-radius: 12px; padding: 22px; width: min(560px, 92vw);
-  max-height: 84vh; overflow: auto; box-shadow: 0 18px 48px rgba(0,0,0,.3);
-}
-.sheet h2 { margin: 0 0 4px; font-size: 17px; }
-.sheet h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: #646b78; }
-.sheet p { margin: 6px 0; }
-.sheet ul { margin: 6px 0; padding-left: 18px; }
-.muted { color: #646b78; font-size: 12px; }
-.verdict { display: inline-block; font-weight: 650; padding: 2px 9px; border-radius: 999px; font-size: 12px; }
-.verdict.block { background: #fdeceb; color: #b4231d; }
-.verdict.safe { background: #fdf3e3; color: #9a6100; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
-button {
-  font: inherit; padding: 7px 14px; border-radius: 7px; cursor: pointer;
-  border: 1px solid #1f4ed8; background: #1f4ed8; color: #fff;
-}
-button.ghost { background: #fff; color: #16181d; border-color: #e2e5ea; }
-textarea { width: 100%; font: inherit; padding: 7px; border: 1px solid #e2e5ea; border-radius: 7px; }
-.error { color: #b4231d; font-size: 12px; }
-`;
 
 // --------------------------------------------------------------- prompt box
 
@@ -96,6 +37,15 @@ function writePrompt(box: PromptBox, text: string): void {
 
 let declared: Classification = 'INTERNAL';
 let staleness: string | null = null;
+/** Off: nothing is checked on Enter; the right-click menu offers "Ask regula.dot" instead. */
+let active = true;
+
+function element(tag: string, className: string, text: string): HTMLElement {
+  const node = document.createElement(tag);
+  node.className = className;
+  node.textContent = text;
+  return node;
+}
 
 function renderBar(shadow: ShadowRoot): void {
   shadow.querySelector('.bar')?.remove();
@@ -128,6 +78,11 @@ function renderBar(shadow: ShadowRoot): void {
   });
 
   bar.append(dot, label, select);
+
+  if (!active) {
+    dot.classList.add('off');
+    bar.append(element('span', 'muted', 'Off. Select text on any page and right-click to ask regula.dot.'));
+  }
 
   if (staleness) {
     const warning = document.createElement('span');
@@ -369,8 +324,15 @@ function showRequestForm(
 // ------------------------------------------------------------------ wiring
 
 function install(): void {
-  const shadow = mountRoot();
+  const shadow = mountRoot(SHADOW_HOST_ID);
   renderBar(shadow);
+
+  // Switched on or off from the popup while this page is open.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !(ACTIVE_KEY in changes)) return;
+    active = (changes[ACTIVE_KEY].newValue as boolean | undefined) ?? true;
+    renderBar(shadow);
+  });
 
   let allowNext = '';
 
@@ -426,7 +388,7 @@ function install(): void {
   document.addEventListener(
     'keydown',
     (event) => {
-      if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+      if (!active || event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
       const target = event.target as HTMLElement | null;
       if (!target || (target.tagName !== 'TEXTAREA' && target.contentEditable !== 'true')) return;
       void evaluate(event);
@@ -435,8 +397,9 @@ function install(): void {
   );
 }
 
-void chrome.storage.local.get(CLASSIFICATION_KEY).then((stored) => {
+void chrome.storage.local.get([CLASSIFICATION_KEY, ACTIVE_KEY]).then((stored) => {
   declared = (stored[CLASSIFICATION_KEY] as Classification | undefined) ?? 'INTERNAL';
+  active = (stored[ACTIVE_KEY] as boolean | undefined) ?? true;
   void chrome.runtime.sendMessage({ type: 'AIG_STATUS' }).then((reply: { staleness: string | null }) => {
     staleness = reply.staleness;
     install();

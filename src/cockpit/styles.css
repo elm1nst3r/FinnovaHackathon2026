@@ -140,6 +140,11 @@ p {
   gap: 0.5rem;
 }
 
+/* The top bar is white-on-navy; the select keeps its light surface and must not inherit the white. */
+.persona {
+  color: var(--ink);
+}
+
 .tag {
   font-size: 0.7rem;
   text-transform: uppercase;

@@ -19,6 +19,7 @@
 - [x] 3.4 Effective permissions matrix: tools by data classification, including tools the employee may not use and the reason.
 - [x] 3.5 Fold active exceptions into the matrix, showing scope and expiry as the reason for widened access.
 - [x] 3.6 Verify no prompt content, detected values or pseudonymisation mapping reach the history store.
+- [x] 3.7 Off switch for regula.dot in the extension popup. While it is off nothing is checked on Enter; instead a right-click on selected text on any page offers "Ask regula.dot", which answers in the page with what it found and where the text may go (every registered tool). The selection stays in the page, and an ask writes neither history nor an audit event.
 
 ## 4. Governance view — demo critical
 
@@ -56,8 +57,8 @@
 
 ## 8. Demo readiness
 
-- [ ] 8.1 End-to-end rehearsal: block, request, approve in the governance view, retry succeeds under the new exception.
-- [ ] 8.2 Rehearse the same path with the policy service stopped, to prove enforcement survives it.
+- [x] 8.1 End-to-end rehearsal: block, request, approve in the governance view, retry succeeds under the new exception.
+- [x] 8.2 Rehearse the same path with the policy service stopped, to prove enforcement survives it.
 - [x] 8.3 Seeded history and monitoring figures that look plausible on screen without fabricating individual people.
 - [x] 8.4 Check every screen for accidental exposure of prompt content before the pitch.
 

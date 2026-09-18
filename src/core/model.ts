@@ -15,6 +15,10 @@ export type Decision = (typeof DECISIONS)[number];
 /** Restrictiveness order used by the precedence rule: BLOCK > MAKE_SAFE > ALLOW. */
 const DECISION_RANK: Record<Decision, number> = { ALLOW: 0, MAKE_SAFE: 1, BLOCK: 2 };
 
+export function decisionRank(decision: Decision): number {
+  return DECISION_RANK[decision];
+}
+
 export function mostRestrictive(decisions: readonly Decision[]): Decision {
   let worst: Decision = 'ALLOW';
   for (const decision of decisions) {

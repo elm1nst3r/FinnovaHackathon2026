@@ -5,7 +5,8 @@ import { memoryStore } from '../src/extension/storage.ts';
 import { appendHistory, clearHistory, prune, readHistory, HISTORY_KEY, MAX_ENTRIES } from '../src/extension/history.ts';
 import { seedDemoHistoryOnce } from '../src/extension/demo-history.ts';
 import { detect, raiseClassification, sanitise } from '../src/extension/detect.ts';
-import { decide } from '../src/core/engine.ts';
+import { decide, decideAcrossRegistry, findToolByHost } from '../src/core/engine.ts';
+import { toAskVerdicts } from '../src/extension/ask-verdict.ts';
 import { SEED_POLICY_SET, SEED_REGISTRY } from '../src/fixtures/seed.ts';
 import type { LocalHistoryEntry } from '../src/core/model.ts';
 
@@ -263,4 +264,40 @@ test('reading history removes aged-out entries from the device, not only from th
   assert.deepEqual(shown.map((candidate) => candidate.id), ['new']);
   const onDisk = await store.get<LocalHistoryEntry[]>(HISTORY_KEY);
   assert.deepEqual(onDisk?.map((candidate) => candidate.id), ['new']);
+});
+
+// ---------------------------------------------------------------- ask regula.dot
+
+test('an ask names the tool of the page it came from and carries no text', () => {
+  const detection = detect(PROMPT);
+  const survey = decideAcrossRegistry(
+    {
+      userId: 'u-anna',
+      groups: [],
+      pseudonymId: '',
+      classification: raiseClassification('INTERNAL', detection.categories),
+      detectedCategories: detection.categories,
+      now: new Date(),
+    },
+    { policySet: SEED_POLICY_SET, registry: SEED_REGISTRY, exceptions: [] },
+  );
+  const verdicts = toAskVerdicts(survey, findToolByHost(SEED_REGISTRY, 'chat.openai.com')?.id ?? null);
+
+  assert.equal(verdicts.length, SEED_REGISTRY.tools.length);
+  assert.deepEqual(verdicts.filter((verdict) => verdict.here).map((verdict) => verdict.toolId), ['chatgpt']);
+  // The credential blocks everywhere, and every verdict says why.
+  assert.ok(verdicts.every((verdict) => verdict.decision === 'BLOCK'));
+  assert.ok(verdicts.every((verdict) => verdict.reasons.some((reason) => reason.policyId === 'CH-AI-CRED-01')));
+
+  // Field by field, nothing from the selection can be in the reply.
+  const serialised = JSON.stringify(verdicts);
+  for (const value of ['Max Muster', 'CH93 0076', 'max.muster@example.ch', 'sk-abcdef', '079 123']) {
+    assert.ok(!serialised.includes(value), `reply leaks ${value}`);
+  }
+  const first = verdicts[0];
+  assert.ok(first);
+  assert.deepEqual(
+    Object.keys(first).sort(),
+    ['approved', 'decision', 'here', 'hostingRegion', 'reasons', 'sanitiseCategories', 'suppressedPolicyIds', 'toolId', 'toolName'],
+  );
 });

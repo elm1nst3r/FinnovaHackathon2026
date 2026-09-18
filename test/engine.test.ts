@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decide, toAuditEvent } from '../src/core/engine.ts';
+import { decide, decideAcrossRegistry, toAuditEvent } from '../src/core/engine.ts';
 import type { DecisionRequest, EnforcementContext } from '../src/core/engine.ts';
 import type { GovernanceException } from '../src/core/model.ts';
 import { SEED_POLICY_SET, SEED_REGISTRY } from '../src/fixtures/seed.ts';
@@ -233,4 +233,31 @@ test('a decision under an exception is auditable', () => {
 
   assert.deepEqual(event.suppressedPolicyIds, ['CH-AI-CONF-01']);
   assert.deepEqual(event.exceptionIds, ['EX-test']);
+});
+
+test('a survey asks every registered tool the same question, most permissive first', () => {
+  const verdicts = decideAcrossRegistry(
+    {
+      userId: 'u-anna',
+      groups: ['finnova-all'],
+      pseudonymId: 'p-3f9a21',
+      classification: 'CONFIDENTIAL',
+      detectedCategories: ['PERSON_NAME', 'IBAN'],
+      now: NOW,
+    },
+    context(),
+  );
+  assert.deepEqual(
+    verdicts.map((verdict) => verdict.tool.id).sort(),
+    SEED_REGISTRY.tools.map((tool) => tool.id).sort(),
+  );
+  const ranks = verdicts.map((verdict) => ['ALLOW', 'MAKE_SAFE', 'BLOCK'].indexOf(verdict.result.decision));
+  assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b));
+
+  const byTool = Object.fromEntries(verdicts.map((verdict) => [verdict.tool.id, verdict.result.decision]));
+  // Copilot is approved for confidential data and permits personal data.
+  assert.equal(byTool['m365-copilot'], 'ALLOW');
+  // ChatGPT is approved for internal work only; Gemini is not approved at all.
+  assert.equal(byTool['chatgpt'], 'BLOCK');
+  assert.equal(byTool['gemini'], 'BLOCK');
 });

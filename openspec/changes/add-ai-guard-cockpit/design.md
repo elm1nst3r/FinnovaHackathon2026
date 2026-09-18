@@ -234,52 +234,108 @@ model — does not have to reconstruct it from the diff.
 - **`guard.ts` replays a blocked submit by dispatching a synthetic
   `KeyboardEvent`.** This is site-dependent by nature and may need tuning per
   tool on the day.
-- **Tasks 8.1 and 8.2 are the only open items outside section 9.** Both are
-  manual rehearsals that need the extension loaded in Chrome. The cockpit half
-  of 8.1 — request, approve, matrix flips, exception visible to the employee —
-  has been walked through in the running application; the block-and-retry half
-  has not, because that happens in a real AI tool's page.
+- **The guard only intercepts Enter.** `guard.ts` listens for `keydown`; a
+  click on the tool's send button, or a paste-and-click flow, is not evaluated.
+  Found during the 8.1 rehearsal, left as a design question below because the
+  right fix (intercepting `submit` and send-button clicks per site) changes
+  enforcement behaviour that is outside this change.
+
+### Rehearsal record: 8.1 and 8.2 (18 September 2026)
+
+Both rehearsals were run against the real `chatgpt.com` (anonymous, no login)
+with `dist/extension/` loaded unpacked into Playwright's Chromium, headed,
+because Cloudflare answers headless Chromium with a challenge page. The guard's
+UI lives in a closed shadow root, so the script drove it through the DevTools
+protocol rather than through page locators. 43 scripted checks passed.
+
+**Persona.** The earlier handover said to rehearse as Luca. Luca already holds
+`EX-101` for exactly the ChatGPT-and-CONFIDENTIAL scope, so his prompt is
+never blocked. Rehearse as **Anna**, who has the pending `REQ-102` and no
+exception; the API test does the same.
+
+**8.1, as rehearsed.** Anna, classification set to Confidential in the bar,
+prompt with a salutation and an IBAN:
+
+1. `BLOCK` sheet names `CH-AI-CONF-01` and `CH-AI-PII-01`, offers Copilot as
+   the alternative and "Ask for access". Nothing reached ChatGPT. Monitoring's
+   total rose by one `BLOCK` from the real extension.
+2. "Ask for access" showed the justification form; the request landed in the
+   queue pre-filled with tool, classification and blocking policy. Neither the
+   request nor the local history contains the prompt, the name or the IBAN.
+3. As Sara in the governance view, the request row showed requester, scope,
+   blocking policy and age. Reason plus expiry, Approve: the request moved to
+   Decided with an `EX-` id, the exception is scoped to Anna / chatgpt /
+   CONFIDENTIAL, suppresses only `CH-AI-CONF-01`, and a `REQUEST_APPROVED`
+   record names Sara.
+4. Firing the `aig-refresh` alarm early (the production path, without the
+   fifteen-minute wait) put the exception in the extension cache.
+5. Anna's employee view: matrix shows Confidential on ChatGPT as permitted
+   under the new exception until its expiry, the exception is listed, the
+   request shows as approved, and the bridge delivered the local history into
+   the page. No prompt content anywhere on the screen.
+6. Same prompt again, same tab: `MAKE_SAFE` with the note that the exception
+   suppresses `CH-AI-CONF-01`. "Replace and send" put `[NAME]` and `[IBAN]`
+   into the composer and ChatGPT accepted the synthetic Enter: the sanitised
+   text appears as the sent message and was answered. The IBAN and the name
+   never left the browser.
+
+**8.2, as rehearsed.** Service stopped, refresh alarm fired:
+
+1. Outage flag persisted in storage; popup and the bar on a freshly loaded
+   page both say the policy set is from cache and the service is unreachable.
+2. Confidential plus PII: still `MAKE_SAFE` under the cached exception, with
+   the staleness note on the sheet. Not fail-shut.
+3. Strictly confidential: still `BLOCK` under `CH-AI-CONF-02`, with "cannot be
+   suppressed by anyone" and no request button. Not fail-open.
+4. Internal prompt with no personal data: no sheet, sent from cache.
+5. Service restarted, alarm fired: outage flag cleared, warning gone on the
+   next page load and after the next decision.
+
+**Caveats the rehearsal surfaced.**
+
+- *Follow-up messages.* On a fresh chat the synthetic Enter re-send worked
+  every time, for `ALLOW` and for `MAKE_SAFE`. Once a conversation exists,
+  ChatGPT ignored it for the next message: the guard allowed the prompt and
+  left it in the composer, so one manual Enter completes it. The demo path is a
+  fresh chat and is unaffected. Tuning the re-send to click the tool's send
+  button is the fix if it matters.
+- *Bar placement.* The bar sits bottom-centre and overlaps ChatGPT's composer
+  in the conversation layout. Cosmetic; a corner would be safer.
+- *Service restart loses approvals.* The store is in memory, so restarting the
+  service reseeds it and the approved exception disappears from the server and,
+  on the next refresh, from the extension. For the pitch: start the service
+  once and leave it running, or stop it only for the 8.2 segment and accept
+  that the approval has to be redone after a restart.
+- *Persona picker.* The demo-identity select in the cockpit header rendered
+  white-on-white after the corporate-design change. Fixed in `styles.css`.
 
 ### Where to pick this up
 
-**State:** 37/44 tasks. `openspec validate add-ai-guard-cockpit --strict` passes,
-`npx tsc --noEmit` is clean, `npm test` is 72/72 green, `npm run build:web`
-produces both bundles. Everything is committed and pushed to `main`.
+**State:** 39/44 tasks. `openspec validate add-ai-guard-cockpit --strict`
+passes, `npx tsc --noEmit` is clean, `npm test` is 80/80 green,
+`npm run build:web` produces both bundles.
 
 **The change is deliberately still active.** Its delta specs have *not* been
-synced into `openspec/specs/`, which is therefore empty. Syncing now would write
-`Shadow Mode` — a Post-MVP requirement nobody built — into the main spec as
-delivered system behaviour. Sync and archive belong after section 8 passes. Run
-`openspec instructions apply --change add-ai-guard-cockpit --json` to resume; the
-CLI is the source of truth for what is left, not this list.
+synced into `openspec/specs/`. Syncing now would write `Shadow Mode`, a
+Post-MVP requirement nobody built, into the main spec as delivered system
+behaviour. Before sync and archive, either wire the shadow count into the
+catalogue and tick 9.1, or move the Shadow Mode requirement out of this change.
+Run `openspec instructions apply --change add-ai-guard-cockpit --json` to see
+what the CLI still considers open; it is the source of truth, not this list.
 
-**The two open tasks, in order:**
-
-1. **8.1 — end-to-end rehearsal.** Load `dist/extension/` as an unpacked
-   extension in Chrome with the service running. As Luca, send a prompt
-   containing a salutation and an IBAN to an approved tool while declaring
-   CONFIDENTIAL. Expect a `BLOCK` sheet; raise the request from it. Switch the
-   cockpit to Sara, approve with a reason and an expiry. Re-send the same
-   prompt: it must now get through. The cockpit half of this already works; what
-   is unproven is `guard.ts` against a live page.
-2. **8.2 — the same path with the service stopped.** Kill the server, reload the
-   tool page, send the prompt again. Enforcement must continue from cache: not
-   failing open, not failing shut. To see the staleness banner without waiting a
-   day, lower `STALE_AFTER_HOURS` in `src/extension/sync.ts`.
-
-Both need a logged-in session on a real AI tool, which is why they were left for
-a human. A local stub page would have meant widening `manifest.json` to a host
-that is not a real tool, and would have proved nothing about the real one.
-
-**Then, and only then:** run the sync and the archive. Section 9 is genuinely
-deferred — do not start it to make a number go up.
+Section 9 is genuinely deferred. Do not start it to make a number go up.
 
 ### Design questions still open for the team
 
 - **Nothing blocks INTERNAL on a tool whose `allowed_data` omits it.** See the
   gap above. Worth a decision before anyone claims the rule set is complete.
-- **`guard.ts` re-send is site-dependent.** If the demo tool changes, this is
-  the first thing that will break.
+- **`guard.ts` re-send is site-dependent.** Proven on chatgpt.com for a fresh
+  chat; not for a follow-up message in an existing conversation. If the demo
+  tool changes, this is the first thing that will break.
+- **`guard.ts` intercepts Enter only.** A click on the send button bypasses
+  enforcement. Intercepting `submit` and send-button clicks is the obvious fix,
+  but it is per-site work and changes enforcement behaviour, so it needs a
+  decision rather than a quiet patch.
 - **The Finnova logo is not in the product.** `docs/brand/finnova-corporate-design.md`
   records the CD rules and the cockpit uses the palette and type system, but the
   wordmark needs the official asset and the manual's clear-space rules.

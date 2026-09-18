@@ -1,9 +1,12 @@
-import { decide, findToolByHost } from '../core/engine.ts';
+import { decide, decideAcrossRegistry, findToolByHost } from '../core/engine.ts';
 import type { DecisionResult } from '../core/engine.ts';
 import type { Classification, DetectionCategory } from '../core/model.ts';
 import { appendHistory, clearHistory, readHistory } from './history.ts';
 import { seedDemoHistoryOnce } from './demo-history.ts';
 import { chromeStore } from './storage.ts';
+import { ACTIVE_KEY, readActive } from './active.ts';
+import { toAskVerdicts } from './ask-verdict.ts';
+import type { AskMessage, AskReply } from './ask-verdict.ts';
 import { PolicySync, describeStaleness } from './sync.ts';
 import type { SyncStatus } from './sync.ts';
 
@@ -44,7 +47,9 @@ export interface DecideReply {
 
 type Message =
   | DecideMessage
+  | AskMessage
   | { type: 'AIG_STATUS' }
+  | { type: 'AIG_SET_ACTIVE'; active: boolean }
   | { type: 'AIG_HISTORY' }
   | { type: 'AIG_HISTORY_CLEAR' }
   | { type: 'AIG_SET_IDENTITY'; identityId: string }
@@ -66,6 +71,12 @@ async function handle(message: Message): Promise<unknown> {
   switch (message.type) {
     case 'AIG_DECIDE':
       return decideFor(message);
+    case 'AIG_ASK':
+      return askFor(message);
+    case 'AIG_SET_ACTIVE':
+      await store.set(ACTIVE_KEY, message.active);
+      await syncAskMenu();
+      return { active: message.active };
     case 'AIG_STATUS':
       return status();
     case 'AIG_HISTORY':
@@ -82,10 +93,16 @@ async function handle(message: Message): Promise<unknown> {
   }
 }
 
-async function status(): Promise<{ identityId: string; staleness: string | null; version: string | null }> {
+async function status(): Promise<{
+  identityId: string;
+  staleness: string | null;
+  version: string | null;
+  active: boolean;
+}> {
   const current = await (await sync()).status();
   return {
     identityId: await identityId(),
+    active: await readActive(store),
     staleness: describeStaleness(current),
     version: current.snapshot?.policySet.version ?? null,
   };
@@ -209,10 +226,68 @@ async function createRequest(message: {
   }
 }
 
+// ------------------------------------------------------------ ask regula.dot
+
+const ASK_MENU_ID = 'aig-ask';
+
+/**
+ * While regula.dot is switched off nothing is checked on Enter, so the
+ * right-click menu offers "Ask regula.dot" on any selection instead. The item
+ * exists only in that state: while the guard is on, the guard answers.
+ */
+async function syncAskMenu(): Promise<void> {
+  const active = await readActive(store);
+  await new Promise<void>((resolve) => chrome.contextMenus.removeAll(() => resolve()));
+  if (active) return;
+  chrome.contextMenus.create({ id: ASK_MENU_ID, title: 'Ask regula.dot', contexts: ['selection'] }, () => {
+    // A duplicate after two quick toggles is harmless; reading lastError clears it.
+    void chrome.runtime.lastError;
+  });
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  // `info.selectionText` is deliberately never read. The service worker learns
+  // which tab asked; the script it injects reads the selection in the page.
+  if (info.menuItemId !== ASK_MENU_ID || tab?.id === undefined) return;
+  void chrome.scripting
+    .executeScript({ target: { tabId: tab.id, frameIds: [info.frameId ?? 0] }, files: ['ask.js'] })
+    .catch(() => {
+      // Pages the browser keeps extensions out of (chrome://, the Web Store).
+    });
+});
+
+/**
+ * The same evaluation as a decision, asked for every tool at once, for a text
+ * that has not been typed anywhere. Nothing is appended to history and no
+ * audit event is sent: an ask is advice, not an interaction with a tool.
+ */
+async function askFor(message: AskMessage): Promise<AskReply> {
+  const engine = await sync();
+  let current: SyncStatus = await engine.status();
+  if (!current.snapshot || current.stale || current.usingCache) current = await engine.refresh();
+  if (!current.snapshot) return { verdicts: null, staleness: describeStaleness(current) };
+
+  const { policySet, registry, exceptions } = current.snapshot;
+  const survey = decideAcrossRegistry(
+    {
+      userId: await identityId(),
+      groups: [],
+      pseudonymId: '',
+      classification: message.classification,
+      detectedCategories: message.detectedCategories,
+      now: new Date(),
+    },
+    { policySet, registry, exceptions },
+  );
+  const here = findToolByHost(registry, message.host)?.id ?? null;
+  return { verdicts: toAskVerdicts(survey, here), staleness: describeStaleness(current) };
+}
+
 // ------------------------------------------------------------------ startup
 
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.alarms.create('aig-refresh', { periodInMinutes: REFRESH_MINUTES });
+  void syncAskMenu();
   void sync()
     .then((engine) => engine.refresh())
     .then((status) =>
@@ -221,6 +296,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  void syncAskMenu();
   void sync().then((engine) => engine.refresh());
 });
 

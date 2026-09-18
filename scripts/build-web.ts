@@ -43,6 +43,7 @@ async function buildExtension(): Promise<void> {
     entryPoints: [
       resolve(root, 'src/extension/background.ts'),
       resolve(root, 'src/extension/guard.ts'),
+      resolve(root, 'src/extension/ask.ts'),
       resolve(root, 'src/extension/bridge.ts'),
       resolve(root, 'src/extension/popup.ts'),
     ],
