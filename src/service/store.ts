@@ -390,6 +390,28 @@ export class GovernanceStore {
     return valid(clone(updated));
   }
 
+  /**
+   * Adds a dated, attributed note without changing state, for outcomes the
+   * requester needs to see that are not a decision: an approval that was
+   * attempted and refused, for instance.
+   */
+  annotateRequest(actor: Identity, requestId: string, reason: string): Result<AccessRequest> {
+    const index = this.#requests.findIndex((request) => request.id === requestId);
+    const existing = this.#requests[index];
+    if (index === -1 || !existing) {
+      return invalid([{ code: 'UNKNOWN_REQUEST', field: 'id', message: `Unknown request ${requestId}.` }]);
+    }
+    const updated: AccessRequest = {
+      ...existing,
+      transitions: [
+        ...existing.transitions,
+        { at: new Date().toISOString(), actorId: actor.id, from: existing.state, to: existing.state, reason },
+      ],
+    };
+    this.#requests[index] = updated;
+    return valid(clone(updated));
+  }
+
   #nextVersion(prefix: string): string {
     const pool = prefix === 'ps' ? this.#policySets : this.#registries;
     return `${prefix}-${new Date().getFullYear()}.${pool.length + 1}`;

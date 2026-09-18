@@ -179,7 +179,9 @@ export function validateExceptionDraft(
         field: 'expiresAt',
         message: 'Expiry must be in the future.',
       });
-    } else if (expiry.getTime() - context.now.getTime() > MAX_EXCEPTION_DAYS * DAY_MS) {
+    } else if (expiry.getTime() - context.now.getTime() > (MAX_EXCEPTION_DAYS + 1) * DAY_MS) {
+      // Plus one day: the maximum is a calendar day, and the cockpit stores an
+      // expiry as the end of that day, so "90 days out" is up to 91 x 24h away.
       errors.push({
         code: 'EXPIRY_TOO_FAR',
         field: 'expiresAt',

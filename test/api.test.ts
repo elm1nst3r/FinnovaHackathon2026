@@ -468,5 +468,103 @@ test('the permissions view explains what an employee may not use, and why', asyn
   const chatgpt = permissions.find((entry) => entry.tool.id === 'chatgpt');
   const confidential = chatgpt?.cells.find((cell) => cell.classification === 'CONFIDENTIAL');
   assert.equal(confidential?.permitted, true, 'Luca has a seeded exception for this');
-  assert.match(confidential?.reason ?? '', /exception EX-101 until/);
+  assert.match(confidential?.reason ?? '', /exception EX-101/);
+});
+
+// ------------------------------------------------------------ audit follow-ups
+
+test('a refused approval leaves its reason on the request for the requester to see', async () => {
+  const raised = await call('POST', '/api/requests', {
+    as: 'u-anna',
+    body: {
+      toolId: 'chatgpt',
+      toolLabel: 'ChatGPT Enterprise',
+      classification: 'CONFIDENTIAL',
+      blockingPolicyIds: ['CH-AI-CRED-01'],
+      justification: 'I need to paste a token to debug it.',
+    },
+  });
+  const requestId = raised.body['id'] as string;
+
+  const response = await call('POST', `/api/governance/requests/${requestId}/decision`, {
+    as: 'u-sara',
+    body: {
+      decision: 'APPROVE',
+      reason: 'Short-lived, for debugging.',
+      expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  });
+  assert.equal(response.status, 422);
+  assert.ok((response.body['errors'] as { code: string }[]).some((error) => error.code === 'NON_SUPPRESSIBLE_POLICY'));
+
+  const mine = await call('GET', '/api/my/requests', { as: 'u-anna' });
+  const request = (mine.body['requests'] as { id: string; state: string; transitions: { reason: string | null; actorId: string }[] }[]).find(
+    (entry) => entry.id === requestId,
+  );
+  assert.equal(request?.state, 'SUBMITTED', 'the request stays open for another route');
+  const last = request?.transitions.at(-1);
+  assert.equal(last?.actorId, 'u-sara');
+  assert.match(last?.reason ?? '', /Approval refused/);
+});
+
+test('shadow outcomes reach the audit log, and only as policy id plus would-be outcome', async () => {
+  const response = await call('POST', '/api/audit-events', {
+    as: 'u-anna',
+    body: {
+      toolId: 'chatgpt',
+      classification: 'INTERNAL',
+      decision: 'ALLOW',
+      shadowOutcomes: [
+        { policyId: 'CH-AI-SHADOW-01', wouldHaveBeen: 'BLOCK', prompt: 'not this' },
+        { policyId: 42, wouldHaveBeen: 'BLOCK' },
+        { policyId: 'CH-AI-SHADOW-02', wouldHaveBeen: 'MAYBE' },
+      ],
+    },
+  });
+  assert.equal(response.status, 201);
+  const stored = store.auditEvents().find((event) => event.id === response.body['id']);
+  assert.deepEqual(stored?.shadowOutcomes, [{ policyId: 'CH-AI-SHADOW-01', wouldHaveBeen: 'BLOCK' }]);
+
+  const monitoring = await call('GET', '/api/governance/monitoring', { as: 'u-sara' });
+  assert.equal((monitoring.body['shadowOutcomes'] as Record<string, number>)['CH-AI-SHADOW-01'], 1);
+});
+
+test('the queue offers Approve only where the grant would succeed', async () => {
+  const current = store.activeRegistry();
+  const published = await call('POST', '/api/governance/registry', {
+    as: 'u-sara',
+    body: {
+      tools: current.tools.map((tool) => (tool.id === 'gemini' ? { ...tool, approvalStatus: 'RESTRICTED' } : tool)),
+      reason: 'Gemini is under assessment.',
+    },
+  });
+  assert.equal(published.status, 201);
+
+  const raised = await call('POST', '/api/requests', {
+    as: 'u-anna',
+    body: {
+      toolId: 'gemini',
+      toolLabel: 'Google Gemini (consumer)',
+      classification: 'INTERNAL',
+      blockingPolicyIds: ['CH-AI-TOOL-01'],
+      justification: 'Trying it out.',
+    },
+  });
+  const queue = await call('GET', '/api/governance/requests', { as: 'u-sara' });
+  const queued = (queue.body['requests'] as Record<string, unknown>[]).find((entry) => entry['id'] === raised.body['id']);
+  assert.equal(queued?.['toolApprovable'], false, 'a RESTRICTED tool is not approvable, matching the grant');
+});
+
+test('removing a tool from the registry flags the exceptions granted on it', async () => {
+  const current = store.activeRegistry();
+  const active = store.exceptions().filter((exception) => exception.revokedAt === null && exception.scope.toolId === 'chatgpt');
+  assert.ok(active.length > 0, 'the seed grants at least one exception on chatgpt');
+
+  const published = await call('POST', '/api/governance/registry', {
+    as: 'u-sara',
+    body: { tools: current.tools.filter((tool) => tool.id !== 'chatgpt'), reason: 'Contract ended.' },
+  });
+  assert.equal(published.status, 201);
+  const flagged = published.body['exceptionsToReview'] as string[];
+  for (const exception of active) assert.ok(flagged.includes(exception.id), `${exception.id} is flagged for review`);
 });

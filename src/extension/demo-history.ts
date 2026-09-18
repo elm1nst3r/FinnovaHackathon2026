@@ -1,5 +1,6 @@
 import type { LocalHistoryEntry } from '../core/model.ts';
 import type { KeyValueStore } from './storage.ts';
+import { HISTORY_KEY } from './history.ts';
 
 const SEEDED_KEY = 'aig.history.seeded';
 
@@ -71,6 +72,6 @@ export async function seedDemoHistoryOnce(
 ): Promise<boolean> {
   if ((await store.get<boolean>(SEEDED_KEY)) === true) return false;
   await store.set(SEEDED_KEY, true);
-  await store.set('aig.history', demoHistory(now, policySetVersion));
+  await store.set(HISTORY_KEY, demoHistory(now, policySetVersion));
   return true;
 }

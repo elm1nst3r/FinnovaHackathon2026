@@ -149,6 +149,38 @@ interface Pending {
   reply: DecideReply;
 }
 
+function showHold(shadow: ShadowRoot, staleness: string | null): void {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'backdrop';
+  const sheet = document.createElement('div');
+  sheet.className = 'sheet';
+  backdrop.append(sheet);
+
+  const verdict = document.createElement('span');
+  verdict.className = 'verdict block';
+  verdict.textContent = 'Not sent';
+
+  const title = document.createElement('h2');
+  title.textContent = 'AI Guard has no rules to apply yet';
+
+  const detail = document.createElement('p');
+  detail.className = 'muted';
+  detail.textContent =
+    staleness ??
+    'The policy service could not be reached and nothing has been cached on this device. Your prompt stays here until the rules are available.';
+
+  const row = document.createElement('div');
+  row.className = 'row';
+  const back = document.createElement('button');
+  back.className = 'ghost';
+  back.textContent = 'Back to my prompt';
+  back.addEventListener('click', () => backdrop.remove());
+  row.append(back);
+
+  sheet.append(verdict, title, detail, row);
+  shadow.append(backdrop);
+}
+
 function showIntervention(shadow: ShadowRoot, pending: Pending, onProceed: (text: string) => void): void {
   const result = pending.reply.result;
   if (!result) return;
@@ -358,7 +390,6 @@ function install(): void {
     const message: DecideMessage = {
       type: 'AIG_DECIDE',
       host: window.location.hostname,
-      toolLabel: document.title,
       classification: effective,
       // Category names only. The prompt stays in this isolated world.
       detectedCategories: detection.categories,
@@ -368,7 +399,15 @@ function install(): void {
     staleness = reply.staleness;
     renderBar(shadow);
 
-    if (!reply.result || reply.result.decision === 'ALLOW') {
+    if (!reply.result) {
+      // No cached policy set and no service: there is nothing to decide with.
+      // Letting the prompt through here would be the enforcement point failing
+      // open on its very first outage, so the prompt is held and the user told.
+      showHold(shadow, reply.staleness);
+      return;
+    }
+
+    if (reply.result.decision === 'ALLOW') {
       allowNext = prompt;
       resend(box);
       return;

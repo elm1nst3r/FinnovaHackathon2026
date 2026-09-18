@@ -78,5 +78,5 @@ separately from the pseudonymous usage audit log.
 #### Scenario: Attribution is not usage monitoring
 
 - **WHEN** governance change records are queried
-- **THEN** they contain only governance actions by governance actors
+- **THEN** they contain only governance actions, and refused or unauthorised attempts at them
 - **AND** they contain no record of any employee's AI interactions

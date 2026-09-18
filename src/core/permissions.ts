@@ -81,11 +81,10 @@ function explain(
   }
 
   if (wideningExceptionIds.length > 0) {
-    const descriptions = wideningExceptionIds
-      .map((id) => context.exceptions.find((exception) => exception.id === id))
-      .filter((exception): exception is GovernanceException => exception !== undefined)
-      .map((exception) => `${exception.id} until ${exception.expiresAt.slice(0, 10)}`);
-    return `Permitted under exception ${descriptions.join(', ')}.`;
+    // The expiry is deliberately not formatted here: this runs on the server,
+    // whose clock and zone are not the employee's. The view that shows the
+    // cell has the exception itself and formats the day like everything else.
+    return `Permitted under exception ${wideningExceptionIds.join(', ')}`;
   }
 
   if (decision === 'MAKE_SAFE') {

@@ -169,7 +169,15 @@ const postAuditEvent: Route = {
             ),
       policySetVersion: text(raw['policySetVersion']) || store.activePolicySet().version,
       registryVersion: text(raw['registryVersion']) || store.activeRegistry().version,
-      shadowOutcomes: [],
+      // Same allow-list discipline: a policy id and a would-be outcome, nothing else.
+      shadowOutcomes: (Array.isArray(raw['shadowOutcomes']) ? raw['shadowOutcomes'] : [])
+        .map((entry) => asRecord(entry))
+        .filter(
+          (entry) =>
+            typeof entry['policyId'] === 'string' &&
+            (DECISIONS as readonly string[]).includes(text(entry['wouldHaveBeen'])),
+        )
+        .map((entry) => ({ policyId: entry['policyId'] as string, wouldHaveBeen: text(entry['wouldHaveBeen']) as Decision })),
     };
 
     store.appendAuditEvent(event);
@@ -298,7 +306,9 @@ const publishRegistry: Route = {
       .filter((exception) => {
         const before = previous.tools.find((tool) => tool.id === exception.scope.toolId);
         const after = result.value.tools.find((tool) => tool.id === exception.scope.toolId);
-        if (!before || !after) return false;
+        if (!before) return false;
+        // A tool removed from the registry strands every exception on it.
+        if (!after) return true;
         return exception.scope.classifications.some(
           (classification) =>
             before.allowedData.includes(classification) && !after.allowedData.includes(classification),
@@ -439,8 +449,10 @@ const requestQueue: Route = {
           ageDays: ageInDays(request, now),
           toolRegistered: tool !== undefined,
           // Approving is only meaningful for a tool the bank has assessed and
-          // approved; anything else has to go back to the assessment.
-          toolApprovable: tool !== undefined && tool.approvalStatus !== 'NOT_APPROVED',
+          // approved; anything else has to go back to the assessment. The same
+          // test exception validation applies, so the queue never offers an
+          // Approve button the grant will refuse.
+          toolApprovable: tool !== undefined && tool.approvalStatus === 'APPROVED',
         };
       }),
       recurring: recurringScopes(open),
@@ -543,7 +555,16 @@ const decideRequest: Route = {
       },
       now,
     );
-    if (!grant.ok) return badRequest(grant.errors);
+    if (!grant.ok) {
+      // The requester is waiting on this too. A refusal the approver sees but
+      // the requester does not leaves them assuming nobody has looked.
+      store.annotateRequest(
+        identity,
+        request.id,
+        `Approval refused: ${grant.errors.map((error) => error.message).join(' ')}`,
+      );
+      return badRequest(grant.errors);
+    }
 
     const result = store.transitionRequest(identity, request.id, 'APPROVED', reason, grant.value.id);
     if (!result.ok) return badRequest(result.errors);

@@ -132,8 +132,16 @@ test('an exception without an expiry is refused', () => {
   assert.ok(errorCodes(result).includes('EXPIRY_REQUIRED'));
 });
 
+test('an expiry exactly at the maximum is accepted, because the maximum is a calendar day', () => {
+  // The cockpit stores "until day X" as the end of day X in local time, so the
+  // instant can be up to a full day beyond MAX_EXCEPTION_DAYS * 24h.
+  const lastDay = new Date(NOW.getTime() + MAX_EXCEPTION_DAYS * 24 * 60 * 60 * 1000);
+  const endOfLastDay = new Date(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate(), 23, 59, 59).toISOString();
+  assert.equal(validateExceptionDraft(draft({ expiresAt: endOfLastDay }), validationContext).ok, true);
+});
+
 test('an expiry beyond the maximum is refused', () => {
-  const tooFar = new Date(NOW.getTime() + (MAX_EXCEPTION_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
+  const tooFar = new Date(NOW.getTime() + (MAX_EXCEPTION_DAYS + 2) * 24 * 60 * 60 * 1000).toISOString();
   const result = validateExceptionDraft(draft({ expiresAt: tooFar }), validationContext);
   assert.equal(result.ok, false);
   assert.ok(errorCodes(result).includes('EXPIRY_TOO_FAR'));
@@ -293,6 +301,26 @@ test('requests for the same scope are visible as a pattern', () => {
     { ...base, id: 'REQ-3', toolId: 'gemini', toolLabel: 'Gemini' },
   ]);
 
+  assert.equal(recurring.length, 1);
+  assert.deepEqual(recurring[0]?.requestIds, ['REQ-1', 'REQ-2']);
+});
+
+test('unregistered tools group by label regardless of spelling', () => {
+  const base: AccessRequest = {
+    id: 'REQ-1',
+    requesterId: 'u-anna',
+    toolId: null,
+    toolLabel: 'DeepSeek',
+    classification: 'INTERNAL',
+    blockingPolicyIds: ['CH-AI-TOOL-01'],
+    justification: 'x',
+    state: 'SUBMITTED',
+    createdAt: NOW.toISOString(),
+    transitions: [],
+    resultingExceptionId: null,
+  };
+
+  const recurring = recurringScopes([base, { ...base, id: 'REQ-2', requesterId: 'u-luca', toolLabel: 'deepseek ' }]);
   assert.equal(recurring.length, 1);
   assert.deepEqual(recurring[0]?.requestIds, ['REQ-1', 'REQ-2']);
 });

@@ -24,10 +24,14 @@ async function sync(): Promise<PolicySync> {
 
 // -------------------------------------------------------------- messages
 
+/**
+ * Deliberately no free-text label: the page title of an AI tool is often the
+ * conversation title, which is derived from the prompt. The host is the only
+ * thing the content script may say about where it is.
+ */
 export interface DecideMessage {
   type: 'AIG_DECIDE';
   host: string;
-  toolLabel: string;
   classification: Classification;
   detectedCategories: DetectionCategory[];
 }
@@ -95,7 +99,9 @@ async function status(): Promise<{ identityId: string; staleness: string | null;
 async function decideFor(message: DecideMessage): Promise<DecideReply> {
   const engine = await sync();
   let current: SyncStatus = await engine.status();
-  if (!current.snapshot || current.stale) current = await engine.refresh();
+  // Retry while on cache so recovery is noticed at the next decision rather
+  // than at the next alarm; a failed attempt is cheap and keeps the flag set.
+  if (!current.snapshot || current.stale || current.usingCache) current = await engine.refresh();
 
   if (!current.snapshot) {
     return { result: null, staleness: describeStaleness(current), toolId: message.host };
@@ -104,6 +110,9 @@ async function decideFor(message: DecideMessage): Promise<DecideReply> {
   const { policySet, registry, exceptions } = current.snapshot;
   const tool = findToolByHost(registry, message.host);
   const toolId = tool?.id ?? message.host;
+  // An unregistered tool is labelled by its hostname. Nothing read from the
+  // page itself, title included, is stored anywhere.
+  const toolLabel = tool?.name ?? message.host;
   const user = await identityId();
 
   const result = decide(
@@ -112,7 +121,7 @@ async function decideFor(message: DecideMessage): Promise<DecideReply> {
       groups: [],
       pseudonymId: '',
       toolId,
-      toolLabel: tool?.name ?? message.toolLabel,
+      toolLabel,
       classification: message.classification,
       detectedCategories: message.detectedCategories,
       now: new Date(),
@@ -122,7 +131,7 @@ async function decideFor(message: DecideMessage): Promise<DecideReply> {
 
   await appendHistory(store, {
     toolId,
-    toolLabel: tool?.name ?? message.toolLabel,
+    toolLabel,
     classification: message.classification,
     detectedCategories: message.detectedCategories,
     result,
@@ -160,6 +169,7 @@ async function reportAuditEvent(
         suppressedPolicyIds: result.suppressedPolicyIds,
         exceptionIds: result.exceptionIds,
         detectedCategories,
+        shadowOutcomes: result.shadowOutcomes,
         policySetVersion: result.policySetVersion,
         registryVersion: result.registryVersion,
       }),

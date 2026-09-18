@@ -2,6 +2,18 @@ import type { GovernanceException, PolicySetVersion, RegistryVersion } from '../
 import type { KeyValueStore } from './storage.ts';
 
 const CACHE_KEY = 'aig.policy.cache';
+/**
+ * The outage flag lives next to the snapshot, not in memory. A service worker
+ * is stopped and restarted between messages, so an in-memory flag would be
+ * gone before the next decision asked for it and the user would never learn
+ * that enforcement is running on cache.
+ */
+const OUTAGE_KEY = 'aig.policy.outage';
+
+interface OutageRecord {
+  lastError: string;
+  since: string;
+}
 
 /** Beyond this the cached policy set is still used, but the user is told it is old. */
 export const STALE_AFTER_HOURS = 24;
@@ -41,9 +53,6 @@ export class PolicySync {
     fetchImpl: typeof fetch;
     now: () => Date;
   };
-  #lastError: string | null = null;
-  #usingCache = false;
-
   constructor(store: KeyValueStore, options: SyncOptions) {
     this.#store = store;
     this.#options = {
@@ -69,31 +78,40 @@ export class PolicySync {
         fetchedAt: this.#options.now().toISOString(),
       };
       await this.#store.set(CACHE_KEY, snapshot);
-      this.#lastError = null;
-      this.#usingCache = false;
-      return this.#status(snapshot);
+      await this.#store.remove(OUTAGE_KEY);
+      return this.#status(snapshot, null);
     } catch (error) {
-      this.#lastError = error instanceof Error ? error.message : 'Policy service unreachable.';
-      this.#usingCache = true;
-      return this.#status(await this.#store.get<PolicySnapshot>(CACHE_KEY));
+      const existing = await this.#store.get<OutageRecord>(OUTAGE_KEY);
+      const outage: OutageRecord = {
+        lastError: error instanceof Error ? error.message : 'Policy service unreachable.',
+        since: existing?.since ?? this.#options.now().toISOString(),
+      };
+      await this.#store.set(OUTAGE_KEY, outage);
+      return this.#status(await this.#store.get<PolicySnapshot>(CACHE_KEY), outage);
     }
   }
 
   async status(): Promise<SyncStatus> {
-    return this.#status(await this.#store.get<PolicySnapshot>(CACHE_KEY));
+    const [snapshot, outage] = await Promise.all([
+      this.#store.get<PolicySnapshot>(CACHE_KEY),
+      this.#store.get<OutageRecord>(OUTAGE_KEY),
+    ]);
+    return this.#status(snapshot, outage);
   }
 
-  #status(snapshot: PolicySnapshot | null): SyncStatus {
+  #status(snapshot: PolicySnapshot | null, outage: OutageRecord | null): SyncStatus {
+    const usingCache = outage !== null;
+    const lastError = outage?.lastError ?? null;
     if (!snapshot) {
-      return { snapshot: null, usingCache: this.#usingCache, stale: false, ageHours: null, lastError: this.#lastError };
+      return { snapshot: null, usingCache, stale: false, ageHours: null, lastError };
     }
     const ageHours = (this.#options.now().getTime() - new Date(snapshot.fetchedAt).getTime()) / 3_600_000;
     return {
       snapshot,
-      usingCache: this.#usingCache,
+      usingCache,
       stale: ageHours > STALE_AFTER_HOURS,
       ageHours,
-      lastError: this.#lastError,
+      lastError,
     };
   }
 
@@ -107,7 +125,9 @@ export class PolicySync {
 }
 
 export function describeStaleness(status: SyncStatus): string | null {
-  if (!status.snapshot) return 'No policy set has been fetched yet, so nothing can be enforced.';
+  if (!status.snapshot) {
+    return 'No policy set has been fetched yet and the policy service is not reachable, so nothing can be sent.';
+  }
   if (!status.usingCache && !status.stale) return null;
   const age = status.ageHours === null ? 'some time' : `${Math.round(status.ageHours)}h`;
   return `Using the policy set fetched ${age} ago — the policy service is not reachable right now.`;

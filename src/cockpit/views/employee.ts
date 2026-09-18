@@ -2,7 +2,7 @@ import { api, ApiFailure } from '../api.ts';
 import type { SessionResponse } from '../api.ts';
 import { badge, clear, decisionBadge, el, field, formatDate, formatDateTime, section, table } from '../dom.ts';
 import { clearLocalHistory, loadLocalHistory } from '../history-bridge.ts';
-import type { Classification } from '../../core/model.ts';
+import type { Classification, Tool } from '../../core/model.ts';
 
 export async function renderEmployeeView(root: HTMLElement, session: SessionResponse): Promise<void> {
   clear(root);
@@ -42,11 +42,18 @@ async function renderPermissions(host: HTMLElement): Promise<void> {
     ...classifications.map((classification) => {
       const cell = entry.cells.find((candidate) => candidate.classification === classification);
       if (!cell) return el('span', { text: '—' });
+      // Same calendar day here as in the exceptions list below: both format
+      // the same instant in the same place.
+      const until = cell.wideningExceptionIds
+        .map((id) => exceptions.find((exception) => exception.id === id))
+        .filter((exception) => exception !== undefined)
+        .map((exception) => `until ${formatDate(exception.expiresAt)}`)
+        .join(', ');
       return el(
         'div',
         {},
         badge(cell.permitted ? 'yes' : 'no', cell.permitted ? 'ok' : 'bad'),
-        el('div', { class: 'muted small', text: cell.reason }),
+        el('div', { class: 'muted small', text: until ? `${cell.reason} ${until}.` : cell.reason }),
       );
     }),
   ]);
@@ -143,7 +150,7 @@ async function renderHistory(host: HTMLElement): Promise<void> {
 // ---------------------------------------------------------------- requests
 
 async function renderRequests(host: HTMLElement): Promise<void> {
-  const { requests } = await api.myRequests();
+  const [{ requests }, registry] = await Promise.all([api.myRequests(), api.registry()]);
   clear(host);
 
   const rows = requests.map((request) => {
@@ -156,7 +163,9 @@ async function renderRequests(host: HTMLElement): Promise<void> {
         request.state === 'APPROVED' ? 'ok' : request.state === 'REJECTED' ? 'bad' : 'warn',
       ),
       request.grant
-        ? `Granted until ${formatDate(request.grant.expiresAt)} (${request.grant.id})`
+        ? `${request.grant.toolId} · ${request.grant.classifications
+            .map((classification) => classification.replace(/_/g, ' ').toLowerCase())
+            .join(', ')} — granted until ${formatDate(request.grant.expiresAt)} (${request.grant.id})`
         : (last?.reason ?? '—'),
     ];
   });
@@ -166,13 +175,28 @@ async function renderRequests(host: HTMLElement): Promise<void> {
       'Your requests',
       null,
       table(['Raised', 'Scope', 'State', 'Outcome'], rows),
-      newRequestForm(() => void renderRequests(host)),
+      newRequestForm(registry.tools, () => void renderRequests(host)),
     ),
   );
 }
 
-function newRequestForm(onSubmitted: () => void): HTMLElement {
-  const tool = el('input', { type: 'text', placeholder: 'e.g. ChatGPT Enterprise', required: true });
+const OTHER_TOOL = '__other__';
+
+function newRequestForm(tools: Tool[], onSubmitted: () => void): HTMLElement {
+  // A registered tool is chosen by id so that approval can actually grant
+  // something; free text is reserved for tools governance has never seen.
+  const tool = el(
+    'select',
+    {},
+    ...tools.map((entry) => el('option', { value: entry.id, text: entry.name })),
+    el('option', { value: OTHER_TOOL, text: 'Another tool (not in the registry)' }),
+  ) as HTMLSelectElement;
+  const otherTool = el('input', { type: 'text', placeholder: 'Name of the tool' }) as HTMLInputElement;
+  const otherField = field('Which tool?', otherTool);
+  otherField.hidden = true;
+  tool.addEventListener('change', () => {
+    otherField.hidden = tool.value !== OTHER_TOOL;
+  });
   const classification = el(
     'select',
     {},
@@ -191,6 +215,7 @@ function newRequestForm(onSubmitted: () => void): HTMLElement {
       text: 'Normally you raise a request straight from the intervention that blocked you, and only the justification is left to fill in. This form is the manual route.',
     }),
     field('Tool', tool),
+    otherField,
     field('Data classification', classification),
     field('Why do you need it?', justification, 'One or two sentences is enough.'),
     feedback,
@@ -202,13 +227,21 @@ function newRequestForm(onSubmitted: () => void): HTMLElement {
     feedback.textContent = '';
     void (async () => {
       try {
+        const registered = tools.find((entry) => entry.id === tool.value);
+        const isOther = tool.value === OTHER_TOOL || !registered;
+        if (isOther && otherTool.value.trim() === '') {
+          feedback.textContent = 'Name the tool you are asking for.';
+          return;
+        }
         await api.createRequest({
-          toolId: null,
-          toolLabel: tool.value,
+          toolId: registered?.id ?? null,
+          toolLabel: registered?.name ?? otherTool.value.trim(),
           classification: classification.value as Classification,
           // A manual request has no intervention behind it, so it names the
-          // rule that governs the tool rather than one that actually fired.
-          blockingPolicyIds: ['CH-AI-TOOL-01'],
+          // rule that would govern the scope: the tool rule for an unknown or
+          // unapproved tool, the confidentiality rule for an approved one.
+          blockingPolicyIds:
+            !registered || registered.approvalStatus !== 'APPROVED' ? ['CH-AI-TOOL-01'] : ['CH-AI-CONF-01'],
           justification: justification.value,
         });
         form.reset();

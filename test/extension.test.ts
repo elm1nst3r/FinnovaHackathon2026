@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PolicySync, STALE_AFTER_HOURS, describeStaleness } from '../src/extension/sync.ts';
 import { memoryStore } from '../src/extension/storage.ts';
-import { appendHistory, clearHistory, prune, readHistory, MAX_ENTRIES } from '../src/extension/history.ts';
+import { appendHistory, clearHistory, prune, readHistory, HISTORY_KEY, MAX_ENTRIES } from '../src/extension/history.ts';
 import { seedDemoHistoryOnce } from '../src/extension/demo-history.ts';
 import { detect, raiseClassification, sanitise } from '../src/extension/detect.ts';
 import { decide } from '../src/core/engine.ts';
@@ -223,4 +223,44 @@ test('a cache older than the staleness window is still used, but flagged', async
 
   assert.equal(status.stale, true);
   assert.equal(status.snapshot?.policySet.version, SEED_POLICY_SET.version);
+});
+
+test('an outage is remembered across service worker restarts, not only in memory', async () => {
+  const store = memoryStore();
+  const options = { baseUrl: 'http://127.0.0.1:8787', identityId: 'u-anna' };
+  await new PolicySync(store, { ...options, fetchImpl: fakeFetch(RESPONSES) }).refresh();
+  await new PolicySync(store, { ...options, fetchImpl: fakeFetch(RESPONSES, true) }).refresh();
+
+  // A fresh instance, as a restarted worker creates for every message, must
+  // still know that the last fetch failed — otherwise the user is never told.
+  const status = await new PolicySync(store, { ...options, fetchImpl: fakeFetch(RESPONSES, true) }).status();
+  assert.equal(status.usingCache, true);
+  assert.match(describeStaleness(status) ?? '', /not reachable/);
+
+  await new PolicySync(store, { ...options, fetchImpl: fakeFetch(RESPONSES) }).refresh();
+  const recovered = await new PolicySync(store, { ...options, fetchImpl: fakeFetch(RESPONSES) }).status();
+  assert.equal(recovered.usingCache, false);
+  assert.equal(describeStaleness(recovered), null);
+});
+
+test('reading history removes aged-out entries from the device, not only from the view', async () => {
+  const now = new Date('2026-03-01T12:00:00Z');
+  const entry = (at: string, id: string): LocalHistoryEntry => ({
+    id,
+    at,
+    toolId: 'chatgpt',
+    toolLabel: 'ChatGPT Enterprise',
+    classification: 'INTERNAL',
+    decision: 'ALLOW',
+    policyIds: [],
+    suppressedPolicyIds: [],
+    detectedCategories: [],
+    policySetVersion: 'ps-2026.1',
+  });
+  const store = memoryStore({ [HISTORY_KEY]: [entry('2026-01-01T12:00:00Z', 'old'), entry(now.toISOString(), 'new')] });
+
+  const shown = await readHistory(store, now);
+  assert.deepEqual(shown.map((candidate) => candidate.id), ['new']);
+  const onDisk = await store.get<LocalHistoryEntry[]>(HISTORY_KEY);
+  assert.deepEqual(onDisk?.map((candidate) => candidate.id), ['new']);
 });

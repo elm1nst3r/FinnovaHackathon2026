@@ -121,7 +121,9 @@ export function recurringScopes(
   const groups = new Map<string, { toolLabel: string; classification: Classification; requestIds: string[] }>();
 
   for (const request of requests) {
-    const key = `${request.toolId ?? request.toolLabel}|${request.classification}`;
+    // Unregistered tools have no id, only whatever the requester typed, so the
+    // label is normalised: "DeepSeek" and "deepseek " are the same pattern.
+    const key = `${request.toolId ?? request.toolLabel.trim().toLowerCase()}|${request.classification}`;
     const existing = groups.get(key);
     if (existing) {
       existing.requestIds.push(request.id);

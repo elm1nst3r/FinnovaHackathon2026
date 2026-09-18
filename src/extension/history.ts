@@ -2,7 +2,7 @@ import type { DecisionResult } from '../core/engine.ts';
 import type { Classification, DetectionCategory, LocalHistoryEntry } from '../core/model.ts';
 import type { KeyValueStore } from './storage.ts';
 
-const HISTORY_KEY = 'aig.history';
+export const HISTORY_KEY = 'aig.history';
 
 export const MAX_ENTRIES = 200;
 export const RETENTION_DAYS = 30;
@@ -46,7 +46,12 @@ export function prune(entries: LocalHistoryEntry[], now: Date): LocalHistoryEntr
 }
 
 export async function readHistory(store: KeyValueStore, now: Date): Promise<LocalHistoryEntry[]> {
-  return prune((await store.get<LocalHistoryEntry[]>(HISTORY_KEY)) ?? [], now);
+  const stored = (await store.get<LocalHistoryEntry[]>(HISTORY_KEY)) ?? [];
+  const pruned = prune(stored, now);
+  // Ageing is written back on read, so an entry past the retention window is
+  // gone from the device, not merely hidden until the next decision happens.
+  if (pruned.length !== stored.length) await store.set(HISTORY_KEY, pruned);
+  return pruned;
 }
 
 export async function appendHistory(
