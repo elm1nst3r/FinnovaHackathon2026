@@ -19,6 +19,48 @@ Part of **[Swiss {ai} Weeks 2026](https://ai-weeks.ch/)** — Switzerland's larg
 
 ---
 
+## 🎯 What we're building — Regula
+
+Banks want employees to use AI, safely. Today that means people reading policies and
+guessing what is allowed. **Regula turns AI governance into infrastructure**: every AI
+interaction is automatically **ALLOWED**, **MADE SAFE** or **BLOCKED** against Finnova
+policy — so the employee never has to interpret the rules.
+
+> **Use AI where you want. Governance follows you.**
+
+Regula is the pink full stop of the finnova logo, in three parts:
+
+| Component | What it is | Its job |
+|---|---|---|
+| **regula.dot** | On-device companion — a macOS menu-bar dot + opt-in desktop pet, and the in-browser extension | Guides the user, collects inputs and explains every decision; never lets prompt content leave uninspected |
+| **regula.cockpit** | Web cockpit + policy service | Where policy is **defined** and each user reviews their **rights and history** (employee + governance views) |
+| **regula.gateway** | AI gateway (concept) | Enforces the same policy on **every** call — browser, IDE, agent, API |
+
+**One rule set, everywhere.** Policy is authored once in the cockpit and enforced by the
+dot on the device today; the gateway extends the same enforcement to servers, agents and
+APIs.
+
+---
+
+## 🏗️ Architecture
+
+<div align="center">
+<img src="assets/dot/regula-architecture.png" alt="Regula architecture — dot, cockpit and gateway on one governed path to every model" width="840" />
+</div>
+
+**One governed path.** The managed device, apps, agents and APIs all reach a single
+endpoint: the **cockpit** defines the policy, the **gateway** enforces **ALLOW · MAKE
+SAFE · BLOCK** before anything reaches a provider, and **dot** guides the user and logs
+metadata-only evidence back to the cockpit.
+
+Interactive diagrams (pan/zoom, guided views) and the write-ups:
+[high-level architecture](docs/pitch/regula-ai-gateway.html) ·
+[device enforcement](docs/pitch/regula-ai-gateway-enforcement.html) ·
+[Regula PRD](docs/prd/regula-ai-gateway.md) ·
+[AI Guard PRD](docs/prd/finnova-ai-guard-prd.md)
+
+---
+
 ## 📍 At a Glance
 
 **Finnova Hackathon** — a 12-hour AI build sprint. **Fri 18 Sep 2026**, Finnova AG Bankware HQ, Lenzburg 🇨🇭. Part of [Swiss {ai} Weeks 2026](https://ai-weeks.ch/). Tracks: Banking & Finance · Freestyle. Tokens, rooms and the final agenda live on the official pages — treat those as the source of truth.
@@ -189,32 +231,20 @@ good policy set, flagging the age once the cache passes 24 hours.
 .
 ├── docs/
 │   ├── prd/            # Product requirement documents  → see docs/prd/README.md
-│   └── pitch/          # Slides, demo script, pitch video assets
+│   └── pitch/          # Architecture diagrams, demo script, pitch assets
 ├── openspec/           # Change specs driving the implementation
-├── assets/dot/         # "Dot" mascot — SVGs + Lottie animations
+├── assets/dot/         # "Dot" mascot — SVGs, Lottie animations, README media
+├── regula/             # regula.dot — Tauri 2 desktop / menu-bar companion
 ├── src/
 │   ├── core/           # Decision engine, policy validation, exceptions — pure, no I/O
-│   ├── service/        # Policy service: identity, store, HTTP routes
-│   ├── cockpit/        # Two-view web cockpit (employee · governance)
-│   ├── extension/      # Chrome MV3 enforcement point
+│   ├── service/        # regula.cockpit policy service: identity, store, HTTP routes
+│   ├── cockpit/        # regula.cockpit web app (employee · governance)
+│   ├── extension/      # regula.dot browser enforcement point (Chrome MV3)
 │   └── fixtures/       # Seed data for the demo
 ├── test/               # node --test suites
 ├── .github/            # PR template
 └── CONTRIBUTING.md     # Branching, commits, ground rules
 ```
-
-### 📄 Concept
-
-**[Finnova AI Guard](docs/prd/finnova-ai-guard-prd.md)** is our AI governance
-enforcement layer: every AI interaction is automatically **ALLOWED**, **MADE SAFE**
-or **BLOCKED** against Finnova policy. It has grown into **[Regula](docs/prd/regula-ai-gateway.md)**
-— a governance suite in three parts:
-
-- **Regula Dot** — the on-device companion that guides the user and collects inputs.
-- **Regula Cockpit** — where policy is defined and each user reviews their rights and history.
-- **Regula Gateway** — the AI gateway that enforces policy on every call, from browser to IDE to agent to API.
-
-> **Use AI where you want. Governance follows you.**
 
 ---
 
