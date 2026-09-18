@@ -1,0 +1,20 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Regula windows: drag, show/hide, click-through, open cockpit links, remember position; the popup under the menu-bar dot shows and hides itself.",
+  "windows": [
+    "main",
+    "popup"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:event:default",
+    "opener:default",
+    "window-state:default"
+  ]
+}

@@ -1,0 +1,86 @@
+@import "./tokens.css";
+
+/* The popup under the menu-bar dot: one line of text and an Open button,
+   same surface as the bubble. The window is 340 x 84, transparent. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--surface-text);
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+#popup {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  line-height: 1.35;
+  cursor: pointer;
+  animation: popup-in var(--transition) var(--ease);
+}
+/* caret pointing up at the dot in the menu bar */
+#popup::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  background: var(--surface);
+  border-left: 1px solid var(--surface-border);
+  border-top: 1px solid var(--surface-border);
+  transform: rotate(45deg);
+}
+@keyframes popup-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+.popup-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--finnova-pink);
+}
+/* up to two lines, so German sentences and long labels are not cut off */
+.popup-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+/* Open: a real target (28 px tall), not a caption */
+.popup-open {
+  flex: none;
+  font: inherit;
+  font-size: 12px;
+  min-height: 28px;
+  border: 1px solid var(--surface-border);
+  background: transparent;
+  color: var(--finnova-green);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.popup-open:hover { border-color: var(--finnova-green); }
+@media (prefers-color-scheme: dark) { .popup-open { color: var(--granted); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #popup { animation: none; }
+}

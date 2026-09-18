@@ -1,0 +1,4 @@
+# Tauri 2.11's dependency tree needs Rust edition 2024 (rustc >= 1.85).
+# Pin a current stable toolchain for the host so builds work regardless of the global default.
+[toolchain]
+channel = "stable-aarch64-apple-darwin"
